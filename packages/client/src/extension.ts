@@ -20,35 +20,6 @@ const log = (msg: string) => {
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms))
 
-const JINJA_LANGUAGE_IDS = [
-  "jinja",
-  "jinja-html",
-  "jinja-xml",
-  "jinja-css",
-  "jinja-json",
-  "jinja-md",
-  "jinja-yaml",
-  "jinja-toml",
-  "jinja-lua",
-  "jinja-properties",
-  "jinja-shell",
-  "jinja-dockerfile",
-  "jinja-sql",
-  "jinja-py",
-  "jinja-cy",
-  "jinja-terraform",
-  "jinja-nginx",
-  "jinja-groovy",
-  "jinja-systemd",
-  "jinja-cpp",
-  "jinja-java",
-  "jinja-js",
-  "jinja-ts",
-  "jinja-php",
-  "jinja-cisco",
-  "jinja-rust",
-]
-
 // HubSpot CMS / HubL language ids (provided by HubSpot extensions).
 // We attach to these ids in "companion mode" so we don't need to contribute languages/grammars.
 const HUBL_LANGUAGE_IDS = [
@@ -169,8 +140,8 @@ export const activate = async (context: vscode.ExtensionContext) => {
   }
 
   // Companion-mode support:
-  // - If HubL language ids exist (HubSpot extension installed), also attach to those ids.
-  // - Keep Jinja ids enabled for standalone usage and for this repo's e2e tests.
+  // - Attach to HubSpot CMS / HubL language ids when they exist.
+  // - Do not contribute languages/grammars ourselves (avoid conflicts with HubSpot extension).
   log(
     "activate(): fetching available languages via vscode.languages.getLanguages()",
   )
@@ -190,10 +161,9 @@ export const activate = async (context: vscode.ExtensionContext) => {
   log(
     `activate(): hubspot selectors enabled = ${JSON.stringify(hublSelectors)}`,
   )
-  const documentSelector = [
-    ...hublSelectors.map(toFileSelector),
-    ...JINJA_LANGUAGE_IDS.map(toFileSelector),
-  ]
+
+  const documentSelector: lsp.DocumentSelector =
+    hublSelectors.map(toFileSelector)
   log(
     `activate(): documentSelector language count = ${documentSelector.length}`,
   )

@@ -18,7 +18,7 @@ suite("Companion mode (HubSpot language ids)", () => {
     const ext = vscode.extensions.getExtension("noamzaks.jinja-ls")!
     await ext.activate()
 
-    const uri = getDocUri("hubl-valid.jinja")
+    const uri = getDocUri("hubl-valid.html")
     const doc = await vscode.workspace.openTextDocument(uri)
     await vscode.window.showTextDocument(doc, { preview: false })
 

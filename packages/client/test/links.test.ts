@@ -3,16 +3,16 @@ import * as vscode from "vscode"
 import { activate, getDocUri } from "./helper"
 
 suite("Should provide document links", () => {
-  const libUri = getDocUri("lib.jinja")
-  const errorsUri = getDocUri("errors.jinja")
+  const libUri = getDocUri("lib.html")
+  const errorsUri = getDocUri("errors.html")
 
-  test("Shows document links in errors.jinja", async () => {
+  test("Shows document links in errors.html", async () => {
     const links = await getLinks(errorsUri)
     expect(links).toMatchObject([
       {
         range: {
           a: { a: 0, b: 11 },
-          b: { a: 0, b: 22 },
+          b: { a: 0, b: 21 },
         },
         target: libUri,
       },

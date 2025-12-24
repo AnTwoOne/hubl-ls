@@ -3,10 +3,10 @@ import * as vscode from "vscode"
 import { activate, getDocUri } from "./helper"
 
 suite("Should provide file details", () => {
-  const libUri = getDocUri("lib.jinja")
-  const errorsUri = getDocUri("errors.jinja")
+  const libUri = getDocUri("lib.html")
+  const errorsUri = getDocUri("errors.html")
 
-  test("Highlights lib.jinja", async () => {
+  test("Highlights lib.html", async () => {
     const resolvedTokens = await getTokens(libUri)
     expect(resolvedTokens).toEqual([
       { start: 3, end: 8, tokenType: "keyword" },
@@ -59,18 +59,29 @@ suite("Should provide file details", () => {
     ])
   })
 
-  test("Highlights the end of errors.jinja", async () => {
+  test("Highlights the end of errors.html", async () => {
     const resolvedTokens = await getTokens(errorsUri)
-    const expectedTokens = [
-      { start: 342, end: 345, tokenType: "keyword" },
-      { start: 346, end: 347, tokenType: "variable" },
-      { start: 348, end: 350, tokenType: "keyword" },
-      { start: 351, end: 356, tokenType: "function" },
-      { start: 357, end: 358, tokenType: "number" },
-    ]
-    for (const token of expectedTokens) {
-      expect(resolvedTokens).toContainEqual(token)
-    }
+
+    const document = await vscode.workspace.openTextDocument(errorsUri)
+    const text = document.getText()
+    const anchor = text.indexOf("for x in range(2)")
+    expect(anchor).toBeGreaterThan(0)
+
+    const forStart = text.indexOf("for", anchor)
+    const xStart = text.indexOf("x", anchor)
+    const inStart = text.indexOf("in", anchor)
+    const rangeStart = text.indexOf("range", anchor)
+    const twoStart = text.indexOf("2", rangeStart)
+
+    expect(resolvedTokens).toEqual(
+      expect.arrayContaining([
+        { start: forStart, end: forStart + 3, tokenType: "keyword" },
+        { start: xStart, end: xStart + 1, tokenType: "variable" },
+        { start: inStart, end: inStart + 2, tokenType: "keyword" },
+        { start: rangeStart, end: rangeStart + 5, tokenType: "function" },
+        { start: twoStart, end: twoStart + 1, tokenType: "number" },
+      ]),
+    )
   })
 })
 

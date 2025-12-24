@@ -15,6 +15,35 @@ export async function activate(docUri: vscode.Uri) {
   await ext.activate()
   try {
     doc = await vscode.workspace.openTextDocument(docUri)
+
+    // Force HubSpot CMS language id so tests exercise the companion-mode path.
+    // The HubSpot extension contributes these ids; we install it in the test runner.
+    const desiredLanguageId = "html-hubl"
+
+    // Ensure HubSpot extension is activated and its language ids are registered.
+    const hubspotExt = vscode.extensions.getExtension("hubspot.hubl")
+    if (hubspotExt && !hubspotExt.isActive) {
+      try {
+        await hubspotExt.activate()
+      } catch {
+        // Ignore activation failures.
+      }
+    }
+
+    for (let i = 0; i < 10; i++) {
+      const availableLanguageIds = new Set(
+        await vscode.languages.getLanguages(),
+      )
+      if (availableLanguageIds.has(desiredLanguageId)) {
+        doc = await vscode.languages.setTextDocumentLanguage(
+          doc,
+          desiredLanguageId,
+        )
+        break
+      }
+      await sleep(250)
+    }
+
     if (
       !vscode.window.visibleTextEditors.some(
         (editor) => editor.document === doc,

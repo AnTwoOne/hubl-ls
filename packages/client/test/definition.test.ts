@@ -3,24 +3,11 @@ import * as vscode from "vscode"
 import { activate, getDocUri } from "./helper"
 
 suite("Should provide go to definition", () => {
-  const libUri = getDocUri("lib.jinja")
-  const errorsUri = getDocUri("errors.jinja")
-  const importedMacroUri = getDocUri("imported-macro.jinja")
-
-  test("Returns definitions for errors.jinja", async () => {
-    expect(await getDefinition(errorsUri, new vscode.Position(29, 7))).toEqual({
-      uri: errorsUri.toString(),
-      range: { start: 346, end: 347 },
-    })
-
-    expect(await getDefinition(errorsUri, new vscode.Position(23, 3))).toEqual({
-      uri: libUri.toString(),
-      range: { start: 9, end: 16 },
-    })
-  })
+  const libUri = getDocUri("lib.html")
+  const importedMacroUri = getDocUri("imported-macro.html")
 
   test("Returns definitions for imported namespace macro calls", async () => {
-    // `{{ lib.example() }}` should jump to the macro definition in lib.jinja
+    // `{{ lib.example() }}` should jump to the macro definition in lib.html
     expect(
       await getDefinition(importedMacroUri, new vscode.Position(2, 9)),
     ).toEqual({

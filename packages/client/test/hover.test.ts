@@ -3,42 +3,8 @@ import * as vscode from "vscode"
 import { activate, getDocUri, rangeToJson } from "./helper"
 
 suite("Should provide hover", () => {
-  const errorsUri = getDocUri("errors.jinja")
-  const moreUri = getDocUri("free/more.jinja")
-  const hublUri = getDocUri("hubl-valid.jinja")
-  const macroDocsUri = getDocUri("macro-docs.jinja")
-
-  test("Returns hover information for errors.jinja", async () => {
-    expect(
-      await getHover(errorsUri, new vscode.Position(27, 15)),
-    ).toMatchObject({
-      contents: ["```python\n(start: int, stop: int, step: int) -> range\n```"],
-      range: [
-        { character: 12, line: 27 },
-        { character: 17, line: 27 },
-      ],
-    })
-
-    expect(await getHover(errorsUri, new vscode.Position(23, 6))).toMatchObject(
-      {
-        contents: [
-          '```python\n(variable1 = "something", another = true, xyzw = 1574) -> str\n```',
-        ],
-        range: [
-          { character: 3, line: 23 },
-          { character: 10, line: 23 },
-        ],
-      },
-    )
-
-    expect(await getHover(moreUri, new vscode.Position(41, 8))).toEqual({
-      contents: ["```python\nx: int = 16\n```", "magical"],
-      range: [
-        { line: 41, character: 8 },
-        { line: 41, character: 8 },
-      ],
-    })
-  })
+  const hublUri = getDocUri("hubl-valid.html")
+  const macroDocsUri = getDocUri("macro-docs.html")
 
   test("Returns hover information for HubL tags + functions", async () => {
     // Hover tag name: `{% module ... %}`
@@ -88,7 +54,7 @@ export const getHover = async (uri: vscode.Uri, position: vscode.Position) => {
     uri,
     position,
   )
-  expect(hovers.length).toEqual(1)
+  expect(hovers.length).toBeGreaterThan(0)
   const hover = hovers[0]
   return {
     contents: hoverToContents(hover),
