@@ -4,6 +4,7 @@ import { activate, getDocUri } from "./helper"
 
 suite("Should provide completions", () => {
   const errorsUri = getDocUri("errors.jinja")
+  const hublUri = getDocUri("hubl-completions.jinja")
 
   test("Returns completions for errors.jinja", async () => {
     expect(
@@ -97,17 +98,71 @@ suite("Should provide completions", () => {
 
     expect(
       await getCompletions(errorsUri, new vscode.Position(34, 12)),
-    ).toMatchObject([
-      { label: "errors.jinja", kind: "File" },
-      { label: "free", kind: "Folder" },
-      { label: "hola.jinja2", kind: "File" },
-      { label: "lib.jinja", kind: "File" },
-      { label: "somewhere", kind: "Folder" },
-    ])
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "errors.jinja", kind: "File" }),
+        expect.objectContaining({ label: "free", kind: "Folder" }),
+        expect.objectContaining({ label: "hola.jinja2", kind: "File" }),
+        expect.objectContaining({ label: "lib.jinja", kind: "File" }),
+        expect.objectContaining({ label: "somewhere", kind: "Folder" }),
+      ]),
+    )
 
     expect(
       await getCompletions(errorsUri, new vscode.Position(35, 22)),
-    ).toMatchObject([{ label: "hi.j2", kind: "File" }])
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "hi.j2", kind: "File" }),
+      ]),
+    )
+  })
+
+  test("Returns HubL completions (tags, globals, filters)", async () => {
+    // Tag-name completion while editing an unknown TagStatement name.
+    // `{% modu %}` should suggest `{% module %}`.
+    expect(
+      await getCompletions(hublUri, new vscode.Position(0, 5), "mo"),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "module", kind: "Keyword" }),
+      ]),
+    )
+
+    // Prefix completion for dnd_* tags.
+    expect(
+      await getCompletions(hublUri, new vscode.Position(1, 6), "dnd"),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "dnd_area", kind: "Keyword" }),
+        expect.objectContaining({ label: "dnd_section", kind: "Keyword" }),
+        expect.objectContaining({ label: "dnd_column", kind: "Keyword" }),
+      ]),
+    )
+
+    // Global completion: `content` should be available.
+    expect(
+      await getCompletions(hublUri, new vscode.Position(3, 5), "con"),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "content", kind: "Variable" }),
+      ]),
+    )
+
+    // Member completion: `content.id` is a known property.
+    expect(await getCompletions(hublUri, new vscode.Position(4, 11))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "id", kind: "Property" }),
+      ]),
+    )
+
+    // Filter completion: `escapejs` should be suggested.
+    expect(
+      await getCompletions(hublUri, new vscode.Position(5, 9), "esc"),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "escapejs", kind: "Function" }),
+      ]),
+    )
   })
 })
 

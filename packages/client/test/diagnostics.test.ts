@@ -4,6 +4,7 @@ import { activate, getDocUri } from "./helper"
 
 suite("Should provide file diagnostics", () => {
   const errorsUri = getDocUri("errors.jinja")
+  const hublUri = getDocUri("hubl-valid.jinja")
 
   test("Returns diagnostics for errors.jinja", async () => {
     await activate(errorsUri)
@@ -57,14 +58,6 @@ suite("Should provide file diagnostics", () => {
       { severity: 0, message: "Expected statement", start: 161, end: 161 },
       {
         severity: 0,
-        message: "Unexpected statement 'invalid'",
-        start: 167,
-        end: 174,
-      },
-      { severity: 0, message: "Expected statement", start: 167, end: 167 },
-      { severity: 0, message: "Expected statement", start: 175, end: 175 },
-      {
-        severity: 0,
         message: "Expected identifier for the filter",
         start: 239,
         end: 239,
@@ -115,5 +108,11 @@ suite("Should provide file diagnostics", () => {
         end: 468,
       },
     ])
+  })
+
+  test("Returns no diagnostics for valid HubL templates", async () => {
+    await activate(hublUri)
+    const diagnostics = vscode.languages.getDiagnostics(hublUri)
+    expect(diagnostics).toEqual([])
   })
 })

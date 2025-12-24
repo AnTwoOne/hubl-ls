@@ -5,6 +5,7 @@ import { activate, getDocUri } from "./helper"
 suite("Should provide go to definition", () => {
   const libUri = getDocUri("lib.jinja")
   const errorsUri = getDocUri("errors.jinja")
+  const importedMacroUri = getDocUri("imported-macro.jinja")
 
   test("Returns definitions for errors.jinja", async () => {
     expect(await getDefinition(errorsUri, new vscode.Position(29, 7))).toEqual({
@@ -13,6 +14,16 @@ suite("Should provide go to definition", () => {
     })
 
     expect(await getDefinition(errorsUri, new vscode.Position(23, 3))).toEqual({
+      uri: libUri.toString(),
+      range: { start: 9, end: 16 },
+    })
+  })
+
+  test("Returns definitions for imported namespace macro calls", async () => {
+    // `{{ lib.example() }}` should jump to the macro definition in lib.jinja
+    expect(
+      await getDefinition(importedMacroUri, new vscode.Position(2, 9)),
+    ).toEqual({
       uri: libUri.toString(),
       range: { start: 9, end: 16 },
     })

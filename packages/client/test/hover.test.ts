@@ -5,6 +5,8 @@ import { activate, getDocUri, rangeToJson } from "./helper"
 suite("Should provide hover", () => {
   const errorsUri = getDocUri("errors.jinja")
   const moreUri = getDocUri("free/more.jinja")
+  const hublUri = getDocUri("hubl-valid.jinja")
+  const macroDocsUri = getDocUri("macro-docs.jinja")
 
   test("Returns hover information for errors.jinja", async () => {
     expect(
@@ -36,6 +38,37 @@ suite("Should provide hover", () => {
         { line: 41, character: 8 },
       ],
     })
+  })
+
+  test("Returns hover information for HubL tags + functions", async () => {
+    // Hover tag name: `{% module ... %}`
+    expect(await getHover(hublUri, new vscode.Position(0, 5))).toMatchObject({
+      contents: expect.arrayContaining([
+        "```python\nmodule(path: str, label: str, no_wrapper: bool) -> None\n```",
+      ]),
+    })
+
+    // Hover function: `resize_image_url(...)`
+    expect(await getHover(hublUri, new vscode.Position(4, 6))).toMatchObject({
+      contents: expect.arrayContaining([
+        "```python\n(src: str, width: int, height: int) -> str\n```",
+      ]),
+    })
+  })
+
+  test("Formats JSDoc-like macro documentation", async () => {
+    // Hover macro call: `SectionWrapper(...)`
+    const hover = await getHover(macroDocsUri, new vscode.Position(11, 5))
+
+    // Signature should still be shown.
+    expect(hover.contents).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("SectionWrapper"),
+        expect.stringContaining("**Parameters**"),
+        expect.stringContaining("**Properties**"),
+        expect.stringContaining("`data.section_id`"),
+      ]),
+    )
   })
 })
 

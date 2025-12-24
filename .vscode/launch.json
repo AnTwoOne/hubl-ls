@@ -12,7 +12,7 @@
         "${workspaceRoot}/dist/**/*.js",
         "${workspaceRoot}/dist/**/*.js"
       ],
-      "autoAttachChildProcesses": true
+      "autoAttachChildProcesses": false
     }
   ]
 }

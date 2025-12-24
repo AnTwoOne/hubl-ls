@@ -3,6 +3,7 @@ import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
 import { BUILTIN_TYPES } from "./builtinTypes"
 import { SPECIAL_SYMBOLS } from "./constants"
+import { formatJSDocLikeMarkdown } from "./docFormatting"
 import {
   configuration,
   documentASTs,
@@ -53,7 +54,8 @@ export const getParametersFromDocumentation = (documentation: string) => {
   const parameterTypes: Record<string, TypeReference> = {}
 
   const r = new RegExp(
-    "@param\\s*(?:\\{([^\\}]+)\\})?\\s+(\\w+)(?::\\s*(.+))?",
+    // Support both `:` and `-` separators: `@param {type} name - desc`
+    "@param\\s*(?:\\{([^\\}]+)\\})?\\s+(\\w+)(?:\\s*(?:-|:)\\s*(.+))?",
     "g",
   )
   let match: RegExpMatchArray
@@ -126,8 +128,9 @@ export const collectSymbols = (
       type: "Macro",
       node: statement,
     })
-    const documentation = statement.getDocumentation()
-    const parameterTypes = getParametersFromDocumentation(documentation)
+    const rawDocumentation = statement.getDocumentation()
+    const documentation = formatJSDocLikeMarkdown(rawDocumentation)
+    const parameterTypes = getParametersFromDocumentation(rawDocumentation)
 
     addSymbol(statement.name.value, {
       type: "Variable",
@@ -272,8 +275,8 @@ export const collectSymbols = (
       )
     }
   } else if (statement instanceof ast.CallStatement) {
-    const documentation = statement.getDocumentation()
-    const parameterTypes = getParametersFromDocumentation(documentation)
+    const rawDocumentation = statement.getDocumentation()
+    const parameterTypes = getParametersFromDocumentation(rawDocumentation)
     for (let i = 0; i < statement.callerArgs.length; i++) {
       const arg = statement.callerArgs[i]
       if (arg instanceof ast.Identifier) {

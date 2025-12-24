@@ -1,6 +1,7 @@
 import { ast } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { HOVER_LITERAL_MAX_LENGTH } from "./constants"
+import { HUBL_TAG_TYPES } from "./hublBuiltins"
 import { documentASTs, documents } from "./state"
 import { findSymbol } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
@@ -23,6 +24,27 @@ export const getHover = async (uri: string, position: lsp.Position) => {
   const callExpression = parentOfType(token, "CallExpression") as
     | ast.CallExpression
     | undefined
+
+  // HubL tag hover (TagStatement name)
+  if (
+    token.type === "Identifier" &&
+    token.parent instanceof ast.TagStatement &&
+    token.parent.identifier === token
+  ) {
+    const tag = HUBL_TAG_TYPES[token.value]
+    if (tag?.signature) {
+      const contents: lsp.MarkedString[] = [
+        {
+          language: "python",
+          value: `${token.value}${stringifySignatureInfo(tag.signature)}`,
+        },
+      ]
+      if (tag.signature.documentation) {
+        contents.push(tag.signature.documentation)
+      }
+      return { contents } satisfies lsp.Hover
+    }
+  }
 
   // Function
   if (

@@ -21,8 +21,12 @@ export async function activate(docUri: vscode.Uri) {
       )
     ) {
       editor = await vscode.window.showTextDocument(doc, { preview: false })
-      await sleep(2000) // Wait for server activation
     }
+
+    // Wait for the language server to process the document.
+    // This avoids flaky tests where hover/completions run before the LSP responses are ready.
+    // NOTE: HubL support adds more analysis work; keep this a bit generous.
+    await sleep(5000)
   } catch (e) {
     console.error(e)
   }

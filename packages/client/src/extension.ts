@@ -6,6 +6,73 @@ import { parse as parseYAML } from "yaml"
 import * as lsp from "vscode-languageclient/node"
 
 let client: lsp.LanguageClient
+let clientBecameRunning = false
+
+const output = vscode.window.createOutputChannel("Jinja Language Server", {
+  log: true,
+})
+
+const log = (msg: string) => {
+  // Timestamped logs for debugging activation hangs.
+  output.info(msg)
+}
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+const JINJA_LANGUAGE_IDS = [
+  "jinja",
+  "jinja-html",
+  "jinja-xml",
+  "jinja-css",
+  "jinja-json",
+  "jinja-md",
+  "jinja-yaml",
+  "jinja-toml",
+  "jinja-lua",
+  "jinja-properties",
+  "jinja-shell",
+  "jinja-dockerfile",
+  "jinja-sql",
+  "jinja-py",
+  "jinja-cy",
+  "jinja-terraform",
+  "jinja-nginx",
+  "jinja-groovy",
+  "jinja-systemd",
+  "jinja-cpp",
+  "jinja-java",
+  "jinja-js",
+  "jinja-ts",
+  "jinja-php",
+  "jinja-cisco",
+  "jinja-rust",
+]
+
+// HubSpot CMS / HubL language ids (provided by HubSpot extensions).
+// We attach to these ids in "companion mode" so we don't need to contribute languages/grammars.
+const HUBL_LANGUAGE_IDS = [
+  // Common variants seen in HubSpot tooling / community setups
+  "hubl",
+  "hubl-html",
+  "hubl-css",
+  "hubl-js",
+  "hubl-json",
+  "hubl-xml",
+  "hubl-yaml",
+  "hubl-md",
+
+  // HubSpot extension language ids often use <host>-hubl (e.g. html-hubl)
+  "html-hubl",
+  "css-hubl",
+  "js-hubl",
+  "json-hubl",
+  "xml-hubl",
+  "yaml-hubl",
+  "md-hubl",
+]
+
+const toFileSelector = (language: string) => ({ scheme: "file", language })
 
 const SetGlobalsRequest = new lsp.RequestType<
   { globals: Record<string, unknown>; uri: string | undefined; merge: boolean },
@@ -14,50 +81,142 @@ const SetGlobalsRequest = new lsp.RequestType<
 >("jinja/setGlobals")
 
 export const activate = async (context: vscode.ExtensionContext) => {
+  log("activate(): start")
+
+  // Optional log file for the language server process (separate Node process).
+  // Only enabled in development to avoid writing into extension installation dirs.
+  let serverLogFile: string | undefined
+  if (context.extensionMode === vscode.ExtensionMode.Development) {
+    const logDir = vscode.Uri.joinPath(context.extensionUri, ".vscode")
+    await vscode.workspace.fs.createDirectory(logDir)
+    serverLogFile = vscode.Uri.joinPath(logDir, "jinja-ls-server.log").fsPath
+
+    // Ensure the server process inherits the env var even if fork options are ignored.
+    process.env.JINJA_LS_LOG_FILE = serverLogFile
+    log(`activate(): server log file = ${serverLogFile}`)
+  }
   const htmlExtension = vscode.extensions.getExtension(
     "vscode.html-language-features",
   )
-  await htmlExtension?.activate()
+
+  if (htmlExtension) {
+    log(
+      `activate(): activating dependency vscode.html-language-features (isActive=${htmlExtension.isActive})`,
+    )
+
+    // In some environments (notably Extension Development Host), the built-in HTML extension
+    // can hang during activation. We only need it as a nice-to-have for HTML-ish editor behavior,
+    // so we keep it best-effort and never block our own activation.
+    void (async () => {
+      const timeoutMs = 2000
+      const activated = await Promise.race([
+        htmlExtension.activate().then(
+          () => true,
+          (err) => {
+            log(
+              `activate(): vscode.html-language-features.activate() failed (continuing): ${String(err)}`,
+            )
+            return false
+          },
+        ),
+        sleep(timeoutMs).then(() => false),
+      ])
+
+      if (activated) {
+        log(
+          `activate(): vscode.html-language-features activated (isActive=${htmlExtension.isActive})`,
+        )
+      } else {
+        log(
+          `activate(): vscode.html-language-features.activate() did not resolve within ${timeoutMs}ms; continuing without waiting`,
+        )
+      }
+    })()
+  } else {
+    log(
+      "activate(): dependency vscode.html-language-features not found (continuing without it)",
+    )
+  }
 
   const serverModule = context.asAbsolutePath(path.join("dist", "server.js"))
+  log(`activate(): resolved serverModule=${serverModule}`)
 
   const serverOptions: lsp.ServerOptions = {
-    run: { module: serverModule, transport: lsp.TransportKind.ipc },
+    run: {
+      module: serverModule,
+      transport: lsp.TransportKind.ipc,
+      options: serverLogFile
+        ? {
+            env: {
+              ...process.env,
+              JINJA_LS_LOG_FILE: serverLogFile,
+            },
+          }
+        : undefined,
+    },
     debug: {
       module: serverModule,
       transport: lsp.TransportKind.ipc,
+      options: serverLogFile
+        ? {
+            env: {
+              ...process.env,
+              JINJA_LS_LOG_FILE: serverLogFile,
+            },
+          }
+        : undefined,
     },
   }
 
+  // Companion-mode support:
+  // - If HubL language ids exist (HubSpot extension installed), also attach to those ids.
+  // - Keep Jinja ids enabled for standalone usage and for this repo's e2e tests.
+  log(
+    "activate(): fetching available languages via vscode.languages.getLanguages()",
+  )
+  const t2 = setTimeout(() => {
+    log(
+      "activate(): still waiting for vscode.languages.getLanguages() after 5000ms",
+    )
+  }, 5000)
+  const availableLanguageIds = new Set(await vscode.languages.getLanguages())
+  clearTimeout(t2)
+  log(
+    `activate(): vscode.languages.getLanguages() returned ${availableLanguageIds.size} ids`,
+  )
+  const hublSelectors = HUBL_LANGUAGE_IDS.filter((id) =>
+    availableLanguageIds.has(id),
+  )
+  log(
+    `activate(): hubspot selectors enabled = ${JSON.stringify(hublSelectors)}`,
+  )
+  const documentSelector = [
+    ...hublSelectors.map(toFileSelector),
+    ...JINJA_LANGUAGE_IDS.map(toFileSelector),
+  ]
+  log(
+    `activate(): documentSelector language count = ${documentSelector.length}`,
+  )
+
   const clientOptions: lsp.LanguageClientOptions = {
-    documentSelector: [
-      { scheme: "file", language: "jinja" },
-      { scheme: "file", language: "jinja-html" },
-      { scheme: "file", language: "jinja-xml" },
-      { scheme: "file", language: "jinja-css" },
-      { scheme: "file", language: "jinja-json" },
-      { scheme: "file", language: "jinja-md" },
-      { scheme: "file", language: "jinja-yaml" },
-      { scheme: "file", language: "jinja-toml" },
-      { scheme: "file", language: "jinja-lua" },
-      { scheme: "file", language: "jinja-properties" },
-      { scheme: "file", language: "jinja-shell" },
-      { scheme: "file", language: "jinja-dockerfile" },
-      { scheme: "file", language: "jinja-sql" },
-      { scheme: "file", language: "jinja-py" },
-      { scheme: "file", language: "jinja-cy" },
-      { scheme: "file", language: "jinja-terraform" },
-      { scheme: "file", language: "jinja-nginx" },
-      { scheme: "file", language: "jinja-groovy" },
-      { scheme: "file", language: "jinja-systemd" },
-      { scheme: "file", language: "jinja-cpp" },
-      { scheme: "file", language: "jinja-java" },
-      { scheme: "file", language: "jinja-js" },
-      { scheme: "file", language: "jinja-ts" },
-      { scheme: "file", language: "jinja-php" },
-      { scheme: "file", language: "jinja-cisco" },
-      { scheme: "file", language: "jinja-rust" },
-    ],
+    documentSelector,
+    outputChannel: output,
+    traceOutputChannel: output,
+    revealOutputChannelOn: lsp.RevealOutputChannelOn.Error,
+    errorHandler: {
+      error: (error, message, count) => {
+        log(
+          `LanguageClient error (count=${count}) message=${String(message)} error=${String(error)}`,
+        )
+        return { action: lsp.ErrorAction.Continue }
+      },
+      closed: () => {
+        // During development/debugging, auto-restarting can hide the root cause by
+        // spamming attach/detach cycles. Prefer surfacing the first failure.
+        log("LanguageClient closed")
+        return { action: lsp.CloseAction.DoNotRestart }
+      },
+    },
   }
 
   client = new lsp.LanguageClient(
@@ -66,6 +225,18 @@ export const activate = async (context: vscode.ExtensionContext) => {
     serverOptions,
     clientOptions,
   )
+
+  client.onDidChangeState((e) => {
+    log(
+      `LanguageClient state changed: ${
+        lsp.State[e.oldState]
+      } -> ${lsp.State[e.newState]}`,
+    )
+
+    if (e.newState === lsp.State.Running) {
+      clientBecameRunning = true
+    }
+  })
 
   client.onRequest("jinja/readFile", async ({ uri }: { uri: string }) => {
     try {
@@ -103,7 +274,19 @@ export const activate = async (context: vscode.ExtensionContext) => {
     },
   )
 
+  log("activate(): starting LanguageClient")
   client.start()
+  log("activate(): client.start() called")
+
+  // vscode-languageclient types used here don't expose `onReady()`, so we track readiness
+  // via state changes.
+  setTimeout(() => {
+    if (!clientBecameRunning) {
+      log(
+        "LanguageClient did not reach Running within 15000ms (likely server start/handshake failure)",
+      )
+    }
+  }, 15000)
 
   context.subscriptions.push(
     vscode.commands.registerCommand("jinjaLS.restart", () => client.restart()),
@@ -177,6 +360,8 @@ export const activate = async (context: vscode.ExtensionContext) => {
         client.sendRequest(SetGlobalsRequest, { globals, uri, merge }),
     ),
   )
+
+  log("activate(): completed")
 }
 
 export const deactivate = async () => {

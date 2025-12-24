@@ -1,4 +1,5 @@
 import { ast, parse, tokenize } from "@jinja-ls/language"
+import * as fs from "fs"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { createConnection } from "vscode-languageserver/node"
@@ -24,6 +25,36 @@ import {
 import { collectSymbols, findImport, SymbolInfo } from "./symbols"
 import { walk } from "./utilities"
 
+// Best-effort file logging for server crashes.
+// The client sets JINJA_LS_LOG_FILE via fork env in [`serverOptions`](packages/client/src/extension.ts:1).
+const SERVER_LOG_FILE = process.env.JINJA_LS_LOG_FILE
+const serverLog = (msg: string) => {
+  if (!SERVER_LOG_FILE) {
+    return
+  }
+  try {
+    fs.appendFileSync(
+      SERVER_LOG_FILE,
+      `${new Date().toISOString()} ${msg}\n`,
+      "utf8",
+    )
+  } catch {
+    // Ignore logging failures.
+  }
+}
+
+serverLog(
+  `server start pid=${process.pid} node=${process.version} argv=${JSON.stringify(process.argv)}`,
+)
+
+process.on("uncaughtException", (err) => {
+  serverLog(`uncaughtException: ${String((err as Error)?.stack ?? err)}`)
+})
+
+process.on("unhandledRejection", (reason) => {
+  serverLog(`unhandledRejection: ${String(reason)}`)
+})
+
 const connection = createConnection(lsp.ProposedFeatures.all)
 const lspDocuments = new lsp.TextDocuments(TextDocument)
 
@@ -34,6 +65,7 @@ const getDocumentAST = (contents: string) => {
     return { program, lexerErrors, parserErrors, tokens: tokenNodes }
   } catch (e) {
     console.log(e)
+    serverLog(`getDocumentAST threw: ${String((e as Error)?.stack ?? e)}`)
   }
   return {}
 }
@@ -43,6 +75,7 @@ export const protectOnThrow = <T>(fn: () => T) => {
     return fn()
   } catch (e) {
     console.log(e)
+    serverLog(`protectOnThrow caught: ${String((e as Error)?.stack ?? e)}`)
   }
 }
 
@@ -57,6 +90,26 @@ connection.onInitialize((params) => {
       semanticTokensProvider: {
         legend,
         documentSelector: [
+          // HubL (HubSpot extension language ids)
+          { scheme: "file", language: "hubl" },
+          { scheme: "file", language: "hubl-html" },
+          { scheme: "file", language: "hubl-css" },
+          { scheme: "file", language: "hubl-js" },
+          { scheme: "file", language: "hubl-json" },
+          { scheme: "file", language: "hubl-xml" },
+          { scheme: "file", language: "hubl-yaml" },
+          { scheme: "file", language: "hubl-md" },
+
+          // Alternative HubSpot ids: <host>-hubl (e.g. html-hubl)
+          { scheme: "file", language: "html-hubl" },
+          { scheme: "file", language: "css-hubl" },
+          { scheme: "file", language: "js-hubl" },
+          { scheme: "file", language: "json-hubl" },
+          { scheme: "file", language: "xml-hubl" },
+          { scheme: "file", language: "yaml-hubl" },
+          { scheme: "file", language: "md-hubl" },
+
+          // Jinja (ids contributed by this extension)
           { scheme: "file", language: "jinja" },
           { scheme: "file", language: "jinja-html" },
           { scheme: "file", language: "jinja-xml" },

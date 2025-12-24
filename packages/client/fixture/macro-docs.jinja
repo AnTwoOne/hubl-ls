@@ -1,0 +1,13 @@
+{#
+@name {string} SectionWrapper - Section wrapper with a section container
+@description This macro is used to wrap a section with a section container.
+@param {object} data - Data dictionary for the SectionWrapper component
+@property {string} data.section_id - Section ID
+@property {object} data.section_styles - Section styles
+#}
+{% macro SectionWrapper(data) %}
+  {{ data.section_id }}
+{% endmacro %}
+
+{{ SectionWrapper(data={"section_id": "abc"}) }}
+

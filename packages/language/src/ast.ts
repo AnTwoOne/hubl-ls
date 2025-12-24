@@ -127,6 +127,28 @@ export class Statement extends Node {
   }
 }
 
+/**
+ * A permissive statement node for `{% tag ... %}` constructs that are not part of the
+ * explicit Jinja statement list supported by this parser.
+ *
+ * This is used to support HubL tags (e.g. `{% module ... %}`) without emitting
+ * parser errors, while still keeping the raw token range via `openToken/identifier/closeToken`.
+ */
+export class TagStatement extends Statement {
+  override type = "TagStatement"
+
+  constructor(
+    /** The tag name after `{%`, e.g. `module` */
+    public tagName: string,
+    /** Arguments between tag name and `%}` (positional + keyword args). */
+    public args: Statement[],
+  ) {
+    super()
+    this.identifierName = tagName
+    this.addChildren(...args)
+  }
+}
+
 export class ErrorNode extends Statement {
   override type = "ErrorNode"
 }

@@ -1,4 +1,5 @@
 import { TypeInfo, TypeReference } from "./types"
+import { HUBL_FILTERS, HUBL_PROGRAM_SYMBOLS, HUBL_TAGS } from "./hublBuiltins"
 
 export const SPECIAL_SYMBOLS: Record<
   string,
@@ -124,6 +125,9 @@ export const SPECIAL_SYMBOLS: Record<
         return: "namespace",
       },
     },
+
+    // HubL globals & functions
+    ...HUBL_PROGRAM_SYMBOLS,
   },
   Macro: {
     varargs: {
@@ -738,6 +742,9 @@ export const BUILTIN_FILTERS: Record<string, TypeInfo> = {
       arguments: [{ name: "indent", default: "None" }],
     },
   },
+
+  // HubL filters (supplementary)
+  ...HUBL_FILTERS,
 }
 
 export const BUILTIN_TESTS: Record<string, TypeInfo> = {
@@ -1088,6 +1095,9 @@ export const BUILTIN_STATEMENTS = [
   "endcall",
   "endwith",
   "endfilter",
+
+  // HubL tags (permissive TagStatement support)
+  ...HUBL_TAGS,
 ]
 
 export const HOVER_LITERAL_MAX_LENGTH = 20

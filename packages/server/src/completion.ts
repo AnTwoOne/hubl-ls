@@ -3,6 +3,7 @@ import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { Utils } from "vscode-uri"
 import { BUILTIN_STATEMENTS } from "./constants"
+import { HUBL_TAG_TYPES } from "./hublBuiltins"
 import { listDirectories } from "./customRequests"
 import {
   configuration,
@@ -203,20 +204,32 @@ export const getCompletion = async (
 
   const block = parentOfType(token, "Block") as ast.Block | undefined
 
+  const statementNameCompletions = BUILTIN_STATEMENTS.map(
+    (statement) =>
+      ({
+        label: statement,
+        kind: lsp.CompletionItemKind.Keyword,
+        insertText: statement + " ",
+        documentation: HUBL_TAG_TYPES[statement]?.signature?.documentation,
+      }) satisfies lsp.CompletionItem,
+  )
+
+  // Completing the statement/tag name itself.
+  if (
+    token.type === "Identifier" &&
+    token.parent instanceof ast.Statement &&
+    token.parent.identifier === token
+  ) {
+    return statementNameCompletions
+  }
+
   if (
     (token.parent instanceof ast.UnexpectedToken &&
       token.parent.message.startsWith("Unexpected statement")) ||
     (token.parent instanceof ast.MissingNode &&
       token.parent.missingType === "statement name")
   ) {
-    return BUILTIN_STATEMENTS.map(
-      (statement) =>
-        ({
-          label: statement,
-          kind: lsp.CompletionItemKind.Keyword,
-          insertText: statement + " ",
-        }) satisfies lsp.CompletionItem,
-    )
+    return statementNameCompletions
   } else if (
     (token.parent?.parent instanceof ast.TestExpression &&
       token.parent.parent.test === token.parent) ||

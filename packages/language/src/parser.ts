@@ -35,6 +35,7 @@ import {
   SpreadExpression,
   Statement,
   StringLiteral,
+  TagStatement,
   Ternary,
   TestExpression,
   TokenNode,
@@ -191,6 +192,53 @@ export function parse(
     return new StringLiteral(token.value, [token])
   }
 
+  /**
+   * Parse arguments inside a `{% ... %}` statement until the closing `%}`.
+   *
+   * This is intentionally permissive to support HubL tags where keyword args
+   * appear without parentheses, e.g. `{% module path="..." label='...' %}`.
+   */
+  function parseTagArgumentsUntilCloseStatement(): Statement[] {
+    const args: Statement[] = []
+
+    while (current < tokens.length && !is(TOKEN_TYPES.CloseStatement)) {
+      // Optional separators (not typical HubL, but tolerate commas)
+      if (is(TOKEN_TYPES.Comma)) {
+        ++current
+        continue
+      }
+
+      const argumentStart = current
+      const argument = parseExpression()
+
+      // HubL-style keyword arg: key = value
+      if (is(TOKEN_TYPES.Equals)) {
+        const equalsToken = tokens[current++] // consume '='
+        if (argument instanceof Identifier) {
+          const value = parseExpression()
+          args.push(new KeywordArgumentExpression(argument, value, equalsToken))
+          continue
+        }
+
+        // Recovery: if LHS wasn't an identifier, still consume RHS so we keep parsing.
+        // Avoid creating a hard parser error here to keep templates diagnostic-free.
+        parseExpression()
+        args.push(argument)
+        continue
+      }
+
+      // Avoid infinite loops on malformed input.
+      if (current === argumentStart) {
+        ++current
+        continue
+      }
+
+      args.push(argument)
+    }
+
+    return args
+  }
+
   function eatUntil(type: string, missingType: string, includingEnd = true) {
     const result: Node[] = []
     while (current < tokens.length && tokens[current]?.type !== type) {
@@ -220,6 +268,23 @@ export function parse(
     }
     const identifier = tokens[current]
     const name = tokens[current]?.value
+
+    // Tags that must never be treated as "generic"/HubL tags when encountered here.
+    // If they appear in `parseJinjaStatement()`, they are unmatched control structures.
+    // Keep Jinja's strict behavior in non-safe parsing (tests rely on this).
+    const UNMATCHED_CONTROL_TAGS = new Set([
+      "elif",
+      "else",
+      "endif",
+      "endfor",
+      "endmacro",
+      "endblock",
+      "endraw",
+      "endcall",
+      "endwith",
+      "endfilter",
+      "endset",
+    ])
     let result: Statement
     switch (name) {
       case "raw":
@@ -351,14 +416,24 @@ export function parse(
         break
       }
       default:
-        result = createUnexpectedToken(
-          `Unexpected statement '${name}'`,
-          tokens[current],
-        )
-        if (!name) {
-          current--
-          eatUntil(TOKEN_TYPES.CloseStatement, "'%}'", false)
-          result.addChild(tokens[current++], "closeToken")
+        if (UNMATCHED_CONTROL_TAGS.has(name)) {
+          // Keep emitting a parser error for unmatched Jinja control structures.
+          // (e.g. a stray `{% endfor %}` at top-level)
+          result = createUnexpectedToken(
+            `Unexpected statement '${name}'`,
+            tokens[current],
+          )
+          ++current // consume the tag name identifier
+          // Consume everything until `%}` so we can continue parsing.
+          result.addChildren(...eatUntil(TOKEN_TYPES.CloseStatement, "'%}'"))
+        } else {
+          // Permissive fallback: treat unknown tags as a generic statement.
+          // This is required for HubL tags (e.g. `{% module %}` / `{% dnd_area %}`)
+          // which are not part of core Jinja syntax.
+          ++current // consume the tag name identifier
+          const args = parseTagArgumentsUntilCloseStatement()
+          closeToken = expect(TOKEN_TYPES.CloseStatement, "'%}'")
+          result = new TagStatement(name, args)
         }
         break
     }
