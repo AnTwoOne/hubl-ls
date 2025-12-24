@@ -72,7 +72,24 @@ const getDocumentAST = (contents: string) => {
 
 export const protectOnThrow = <T>(fn: () => T) => {
   try {
-    return fn()
+    const result = fn()
+
+    // If the handler is async, make sure we also catch promise rejections.
+    if (
+      result !== null &&
+      result !== undefined &&
+      typeof (result as unknown as { then?: unknown }).then === "function"
+    ) {
+      return (result as unknown as Promise<unknown>).catch((e) => {
+        console.log(e)
+        serverLog(
+          `protectOnThrow async rejection: ${String((e as Error)?.stack ?? e)}`,
+        )
+        return undefined
+      }) as T
+    }
+
+    return result
   } catch (e) {
     console.log(e)
     serverLog(`protectOnThrow caught: ${String((e as Error)?.stack ?? e)}`)
@@ -203,8 +220,8 @@ const analyzeDocument = async (document: TextDocument) => {
   }
 }
 
-lspDocuments.onDidChangeContent((event) => {
-  analyzeDocument(event.document)
+const handleDocument = (document: TextDocument) => {
+  analyzeDocument(document)
 
   if (!configuration.initialized) {
     connection.workspace
@@ -216,9 +233,20 @@ lspDocuments.onDidChangeContent((event) => {
           configuration[key] = currentConfiguration[key]
         }
         configuration.initialized = true
-        analyzeDocument(event.document)
+        analyzeDocument(document)
       })
   }
+}
+
+// Ensure we analyze documents on open as well as on change.
+// (Some clients/tests open a document and immediately request hover/completions
+// without making an edit; relying only on onDidChangeContent can be flaky.)
+lspDocuments.onDidOpen((event) => {
+  handleDocument(event.document)
+})
+
+lspDocuments.onDidChangeContent((event) => {
+  handleDocument(event.document)
 })
 
 connection.languages.semanticTokens.on(async (params) =>

@@ -21,7 +21,12 @@ export const TOKEN_TYPES = Object.freeze({
   Comma: "Comma", // ,
   Dot: "Dot", // .
   Colon: "Colon", // :
+  QuestionMark: "QuestionMark", // ?
   Pipe: "Pipe", // |
+
+  // HubL / JS-style boolean operators
+  LogicalOrOperator: "LogicalOrOperator", // ||
+  LogicalAndOperator: "LogicalAndOperator", // &&
 
   CallOperator: "CallOperator", // ()
   AdditiveBinaryOperator: "AdditiveBinaryOperator", // + - ~
@@ -98,8 +103,17 @@ const ORDERED_MAPPING_TABLE: [string, TokenType][] = [
   [",", TOKEN_TYPES.Comma],
   [".", TOKEN_TYPES.Dot],
   [":", TOKEN_TYPES.Colon],
+  ["?", TOKEN_TYPES.QuestionMark],
+
+  // JS-style boolean operators (HubL accepts these)
+  // NOTE: multi-char tokens must appear before single-char `|`.
+  ["||", TOKEN_TYPES.LogicalOrOperator],
+  ["&&", TOKEN_TYPES.LogicalAndOperator],
   ["|", TOKEN_TYPES.Pipe],
+
   // Comparison operators
+  ["===", TOKEN_TYPES.ComparisonBinaryOperator],
+  ["!==", TOKEN_TYPES.ComparisonBinaryOperator],
   ["<=", TOKEN_TYPES.ComparisonBinaryOperator],
   [">=", TOKEN_TYPES.ComparisonBinaryOperator],
   ["==", TOKEN_TYPES.ComparisonBinaryOperator],
@@ -163,6 +177,10 @@ export function tokenize(
   let previousCursorPosition = 0
   let curlyBracketDepth = 0
   let insideRaw = false
+  // Track whether we're currently inside a `{% ... %}` / `{{ ... }}`.
+  // This is needed because HubL allows nested `{{ ... }}` inside `{% ... %}`
+  // tag arguments.
+  let codeDepth = 0
 
   const createToken = (value: string, type: TokenType) => {
     const result = new Token(
@@ -232,14 +250,7 @@ export function tokenize(
   // Build each token until end of input
   main: while (cursorPosition < source.length) {
     // First, consume all text that is outside of a Jinja statement or expression
-    const lastTokenType = tokens.at(-1)?.type
-    if (
-      lastTokenType === undefined ||
-      lastTokenType === TOKEN_TYPES.CloseStatement ||
-      lastTokenType === TOKEN_TYPES.CloseExpression ||
-      lastTokenType === TOKEN_TYPES.Comment ||
-      insideRaw
-    ) {
+    if (codeDepth === 0 || insideRaw) {
       let text = ""
       if (insideRaw) {
         const rawStart = cursorPosition
@@ -357,35 +368,49 @@ export function tokenize(
 
     // Check for unary operators
     if (char === "-" || char === "+") {
-      const lastTokenType = tokens.at(-1)?.type
+      // Whitespace-control closers like `-%}` / `-}}` / `+%}` / `+}}` must be
+      // tokenized as CloseStatement/CloseExpression, not as a unary/binary op.
+      // Otherwise the parser will see an extra UnaryOperator before the closer
+      // and emit `Expected '%}'` (common in HubL: `{% set x = {...} -%}`).
+      const tail3 = source.slice(cursorPosition, cursorPosition + 3)
+      if (
+        tail3 === "-%}" ||
+        tail3 === "-}}" ||
+        tail3 === "+%}" ||
+        tail3 === "+}}"
+      ) {
+        // Let ORDERED_MAPPING_TABLE handle it.
+      } else {
+        const lastTokenType = tokens.at(-1)?.type
 
-      switch (lastTokenType) {
-        case TOKEN_TYPES.Identifier:
-        case TOKEN_TYPES.NumericLiteral:
-        case TOKEN_TYPES.StringLiteral:
-        case TOKEN_TYPES.CloseParen:
-        case TOKEN_TYPES.CloseSquareBracket:
-          // Part of a binary operator
-          // a - 1, 1 - 1, true - 1, "apple" - 1, (1) - 1, a[1] - 1
-          // Continue parsing normally
-          break
+        switch (lastTokenType) {
+          case TOKEN_TYPES.Identifier:
+          case TOKEN_TYPES.NumericLiteral:
+          case TOKEN_TYPES.StringLiteral:
+          case TOKEN_TYPES.CloseParen:
+          case TOKEN_TYPES.CloseSquareBracket:
+            // Part of a binary operator
+            // a - 1, 1 - 1, true - 1, "apple" - 1, (1) - 1, a[1] - 1
+            // Continue parsing normally
+            break
 
-        default: {
-          // Is part of a unary operator
-          // (-1), [-1], (1 + -1), not -1, -apple
-          ++cursorPosition // consume the unary operator
+          default: {
+            // Is part of a unary operator
+            // (-1), [-1], (1 + -1), not -1, -apple
+            ++cursorPosition // consume the unary operator
 
-          // Check for numbers following the unary operator
-          const num = consumeWhile(isInteger)
-          tokens.push(
-            createToken(
-              `${char}${num}`,
-              num.length > 0
-                ? TOKEN_TYPES.NumericLiteral
-                : TOKEN_TYPES.UnaryOperator,
-            ),
-          )
-          continue
+            // Check for numbers following the unary operator
+            const num = consumeWhile(isInteger)
+            tokens.push(
+              createToken(
+                `${char}${num}`,
+                num.length > 0
+                  ? TOKEN_TYPES.NumericLiteral
+                  : TOKEN_TYPES.UnaryOperator,
+              ),
+            )
+            continue
+          }
         }
       }
     }
@@ -401,10 +426,18 @@ export function tokenize(
         // possibly adjust the curly bracket depth
         if (type === TOKEN_TYPES.OpenExpression) {
           curlyBracketDepth = 0
+          codeDepth++
+        } else if (type === TOKEN_TYPES.OpenStatement) {
+          codeDepth++
         } else if (type === TOKEN_TYPES.OpenCurlyBracket) {
           ++curlyBracketDepth
         } else if (type === TOKEN_TYPES.CloseCurlyBracket) {
           --curlyBracketDepth
+        } else if (
+          type === TOKEN_TYPES.CloseExpression ||
+          type === TOKEN_TYPES.CloseStatement
+        ) {
+          codeDepth = Math.max(0, codeDepth - 1)
         }
         cursorPosition += seq.length
         tokens.push(createToken(seq, type))

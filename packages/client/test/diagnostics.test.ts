@@ -8,7 +8,6 @@ suite("Should provide file diagnostics", () => {
 
   test("Returns diagnostics for errors.html", async () => {
     await activate(errorsUri)
-    const document = await vscode.workspace.openTextDocument(errorsUri)
     const diagnostics = vscode.languages.getDiagnostics(errorsUri)
     const resolvedDiagnostics = diagnostics.map((diagnostic) => ({
       severity: diagnostic.severity,

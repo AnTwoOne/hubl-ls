@@ -603,10 +603,12 @@ export class Interpreter {
     // NOTE: Short-circuiting is handled by the `evaluate` function
     switch (node.operator.value) {
       case "and":
+      case "&&":
         return left.__bool__().value
           ? this.evaluate(node.right, environment)
           : left
       case "or":
+      case "||":
         return left.__bool__().value
           ? left
           : this.evaluate(node.right, environment)
@@ -616,8 +618,10 @@ export class Interpreter {
     const right = this.evaluate(node.right, environment)
     switch (node.operator.value) {
       case "==":
+      case "===":
         return new BooleanValue(left.value == right.value)
       case "!=":
+      case "!==":
         return new BooleanValue(left.value != right.value)
     }
 

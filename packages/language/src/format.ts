@@ -371,10 +371,19 @@ export function formatExpression(
     }
     case "Ternary": {
       const n = node as Ternary
-      const expr = `${formatExpression(n.trueExpr)} if ${formatExpression(
-        n.condition,
-        0,
-      )} else ${formatExpression(n.falseExpr)}`
+      // HubL supports a JS-style ternary (`cond ? a : b`) in addition to Jinja's
+      // conditional expression (`a if cond else b`). Preserve the operator style
+      // if it was parsed from `? :`.
+      const isQMarkTernary = n.ifToken?.value === "?"
+
+      const expr = isQMarkTernary
+        ? `${formatExpression(n.condition, 0)} ? ${formatExpression(
+            n.trueExpr,
+          )} : ${formatExpression(n.falseExpr)}`
+        : `${formatExpression(n.trueExpr)} if ${formatExpression(
+            n.condition,
+            0,
+          )} else ${formatExpression(n.falseExpr)}`
       return parentPrec > -1 ? `(${expr})` : expr
     }
     default:

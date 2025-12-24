@@ -51,19 +51,173 @@ export const argToArgumentInfo = (arg: ast.Expression): ArgumentInfo => {
 }
 
 export const getParametersFromDocumentation = (documentation: string) => {
-  const parameterTypes: Record<string, TypeReference> = {}
+  const parameterTypes: Record<string, TypeInfo | TypeReference> = {}
 
-  const r = new RegExp(
-    // Support both `:` and `-` separators: `@param {type} name - desc`
-    "@param\\s*(?:\\{([^\\}]+)\\})?\\s+(\\w+)(?:\\s*(?:-|:)\\s*(.+))?",
-    "g",
-  )
-  let match: RegExpMatchArray
-  while ((match = r.exec(documentation)) !== null) {
-    const type = match[1] ?? undefined
-    const variable = match[2] ?? undefined
-    const documentation = match[3] ?? undefined
-    parameterTypes[variable] = { type, documentation }
+  const normalizeDocType = (raw: string | undefined) => {
+    if (!raw) return undefined
+    const t = raw.trim().toLowerCase()
+    // Minimal JSDoc -> internal builtin mapping.
+    if (t === "string" || t === "str") return "str"
+    if (t === "number" || t === "float") return "float"
+    if (t === "int" || t === "integer") return "int"
+    if (t === "bool" || t === "boolean") return "bool"
+    if (t === "object" || t === "dict" || t === "map" || t === "record")
+      return "dict"
+    if (t === "array" || t === "list") return "list"
+    if (t === "any" || t === "unknown") return "Any"
+    return raw.trim()
+  }
+
+  const ensureObjectParam = (name: string): TypeInfo => {
+    const existing = parameterTypes[name]
+    const resolved = resolveType(
+      existing as unknown as TypeInfo | TypeReference | string | undefined,
+    )
+    if (
+      existing &&
+      typeof existing === "object" &&
+      "name" in existing &&
+      (existing as TypeInfo).properties !== undefined
+    ) {
+      return existing as TypeInfo
+    }
+
+    // If we already have a non-object type, keep its documentation but widen to dict.
+    const next: TypeInfo = {
+      name: resolved?.name === "list" ? "list" : "dict",
+      documentation:
+        existing &&
+        typeof existing === "object" &&
+        "documentation" in existing &&
+        typeof (existing as { documentation?: unknown }).documentation ===
+          "string"
+          ? ((existing as { documentation?: string }).documentation ??
+            undefined)
+          : undefined,
+      properties: {
+        ...(resolved?.properties ?? {}),
+      },
+    }
+    parameterTypes[name] = next
+    return next
+  }
+
+  const setNestedProperty = (
+    root: TypeInfo,
+    path: string[],
+    value: TypeInfo | TypeReference,
+  ) => {
+    let current: TypeInfo = root
+    for (let i = 0; i < path.length; i++) {
+      const key = path[i]
+      if (!current.properties) current.properties = {}
+      if (i === path.length - 1) {
+        current.properties[key] = value
+        return
+      }
+      const existing = current.properties[key]
+      if (existing && typeof existing === "object" && "name" in existing) {
+        current = existing as TypeInfo
+        continue
+      }
+      const child: TypeInfo = { name: "dict", properties: {} }
+      current.properties[key] = child
+      current = child
+    }
+  }
+
+  const upsertParam = (
+    name: string,
+    type: string | undefined,
+    doc: string | undefined,
+  ) => {
+    const normalized = normalizeDocType(type)
+    // If this looks like an object-ish param, represent it as a dict TypeInfo so
+    // member completion can work.
+    if (
+      normalized === "dict" ||
+      normalized === "list" ||
+      normalized === "Any"
+    ) {
+      const base = ensureObjectParam(name)
+      if (doc) base.documentation = doc
+      return
+    }
+
+    parameterTypes[name] = {
+      type: normalized ?? "Any",
+      documentation: doc,
+    } satisfies TypeReference
+  }
+
+  // 1) Parse @param
+  {
+    const r = new RegExp(
+      // Support both `:` and `-` separators: `@param {type} name - desc`
+      "@param\\s*(?:\\{([^\\}]+)\\})?\\s+([\\w.]+)(?:\\s*(?:-|:)\\s*(.+))?",
+      "g",
+    )
+    let match: RegExpMatchArray
+    while ((match = r.exec(documentation)) !== null) {
+      const rawType = match[1] ?? undefined
+      const variable = match[2] ?? undefined
+      const doc = match[3] ?? undefined
+
+      if (variable.includes(".")) {
+        const [rootName, ...rest] = variable.split(".")
+        const root = ensureObjectParam(rootName)
+        const normalized = normalizeDocType(rawType)
+        const value: TypeReference = {
+          type: normalized ?? "Any",
+          documentation: doc,
+        }
+        setNestedProperty(root, rest, value)
+      } else {
+        upsertParam(variable, rawType, doc)
+      }
+    }
+  }
+
+  // 2) Parse @property (common HubL convention). If the property name includes a
+  // dot path (e.g. `data.section_id`) we attach to that root param. If it's a
+  // bare property (e.g. `section_id`) we attach to the single object param if
+  // unambiguous.
+  {
+    const r = new RegExp(
+      "@property\\s*(?:\\{([^\\}]+)\\})?\\s+([\\w.]+)(?:\\s*(?:-|:)\\s*(.+))?",
+      "g",
+    )
+    let match: RegExpMatchArray
+    while ((match = r.exec(documentation)) !== null) {
+      const rawType = match[1] ?? undefined
+      const variable = match[2] ?? undefined
+      const doc = match[3] ?? undefined
+
+      const normalized = normalizeDocType(rawType)
+      const value: TypeReference = {
+        type: normalized ?? "Any",
+        documentation: doc,
+      }
+
+      if (variable.includes(".")) {
+        const [rootName, ...rest] = variable.split(".")
+        const root = ensureObjectParam(rootName)
+        setNestedProperty(root, rest, value)
+      } else {
+        const objectParams = Object.entries(parameterTypes)
+          .filter(
+            ([, t]) =>
+              resolveType(
+                t as unknown as TypeInfo | TypeReference | string | undefined,
+              )?.name === "dict",
+          )
+          .map(([k]) => k)
+        if (objectParams.length === 1) {
+          const root = ensureObjectParam(objectParams[0])
+          setNestedProperty(root, [variable], value)
+        }
+      }
+    }
   }
 
   return parameterTypes

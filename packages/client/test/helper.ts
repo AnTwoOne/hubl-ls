@@ -30,16 +30,20 @@ export async function activate(docUri: vscode.Uri) {
       }
     }
 
-    for (let i = 0; i < 10; i++) {
-      const availableLanguageIds = new Set(
-        await vscode.languages.getLanguages(),
-      )
-      if (availableLanguageIds.has(desiredLanguageId)) {
-        doc = await vscode.languages.setTextDocumentLanguage(
+    // `vscode.languages.getLanguages()` can be temporarily incomplete in e2e runs.
+    // Prefer a retry loop around `setTextDocumentLanguage()`.
+    for (let i = 0; i < 20; i++) {
+      try {
+        const next = await vscode.languages.setTextDocumentLanguage(
           doc,
           desiredLanguageId,
         )
-        break
+        if (next.languageId === desiredLanguageId) {
+          doc = next
+          break
+        }
+      } catch {
+        // Retry.
       }
       await sleep(250)
     }
@@ -55,7 +59,8 @@ export async function activate(docUri: vscode.Uri) {
     // Wait for the language server to process the document.
     // This avoids flaky tests where hover/completions run before the LSP responses are ready.
     // NOTE: HubL support adds more analysis work; keep this a bit generous.
-    await sleep(5000)
+    // Keep this generous: the extension host may need time to spin up the LSP.
+    await sleep(8000)
   } catch (e) {
     console.error(e)
   }

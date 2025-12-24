@@ -1,7 +1,7 @@
 import { ast } from "@jinja-ls/language"
 import * as lsp from "vscode-languageserver"
 import { HOVER_LITERAL_MAX_LENGTH } from "./constants"
-import { HUBL_TAG_TYPES } from "./hublBuiltins"
+import { HUBL_PROGRAM_SYMBOLS, HUBL_TAG_TYPES } from "./hublBuiltins"
 import { documentASTs, documents } from "./state"
 import { findSymbol } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
@@ -25,14 +25,17 @@ export const getHover = async (uri: string, position: lsp.Position) => {
     | ast.CallExpression
     | undefined
 
-  // HubL tag hover (TagStatement name)
-  if (
-    token.type === "Identifier" &&
-    token.parent instanceof ast.TagStatement &&
-    token.parent.identifier === token
-  ) {
+  // HubL tag hover: prefer TagStatement, but be robust even if the AST node
+  // isn't TagStatement (e.g. older ASTs / differing parsers).
+  if (token.type === "Identifier") {
     const tag = HUBL_TAG_TYPES[token.value]
-    if (tag?.signature) {
+
+    const looksLikeTagName =
+      (token.parent instanceof ast.TagStatement &&
+        token.parent.identifier === token) ||
+      token.getPreviousSibling()?.type === "OpenStatement"
+
+    if (looksLikeTagName && tag?.signature) {
       const contents: lsp.MarkedString[] = [
         {
           language: "python",
@@ -70,6 +73,27 @@ export const getHover = async (uri: string, position: lsp.Position) => {
       return {
         contents,
       } satisfies lsp.Hover
+    }
+
+    // Fallback: if type inference didn't resolve a signature, still provide hover
+    // for well-known HubL globals/functions.
+    const builtin = HUBL_PROGRAM_SYMBOLS[token.value]
+    if (
+      builtin !== null &&
+      typeof builtin === "object" &&
+      "signature" in builtin &&
+      builtin.signature
+    ) {
+      const contents: lsp.MarkedString[] = [
+        {
+          language: "python",
+          value: stringifySignatureInfo(builtin.signature),
+        },
+      ]
+      if (builtin.signature.documentation) {
+        contents.push(builtin.signature.documentation)
+      }
+      return { contents } satisfies lsp.Hover
     }
 
     const [symbol, symbolDocument] = findSymbol(

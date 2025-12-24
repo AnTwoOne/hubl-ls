@@ -1,9 +1,7 @@
 import { expect } from "expect"
 import * as vscode from "vscode"
 
-import { getDocUri } from "./helper"
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+import { activate, doc, getDocUri } from "./helper"
 
 suite("Companion mode (HubSpot language ids)", () => {
   test("Provides LSP features when document language is html-hubl (if available)", async function () {
@@ -19,18 +17,11 @@ suite("Companion mode (HubSpot language ids)", () => {
     await ext.activate()
 
     const uri = getDocUri("hubl-valid.html")
-    const doc = await vscode.workspace.openTextDocument(uri)
-    await vscode.window.showTextDocument(doc, { preview: false })
 
-    // Switch the document language to the HubSpot id.
-    const hublDoc = await vscode.languages.setTextDocumentLanguage(
-      doc,
-      "html-hubl",
-    )
-    expect(hublDoc.languageId).toEqual("html-hubl")
-
-    // Allow the language server time to reprocess.
-    await sleep(2500)
+    // Use the shared test harness so we consistently open the document under the
+    // HubSpot language id and wait for the language server to process it.
+    await activate(uri)
+    expect(doc.languageId).toEqual("html-hubl")
 
     // Completion sanity: `content` should be a known global.
     const completions: vscode.CompletionList =

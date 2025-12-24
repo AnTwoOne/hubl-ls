@@ -215,7 +215,21 @@ export function parse(
       if (is(TOKEN_TYPES.Equals)) {
         const equalsToken = tokens[current++] // consume '='
         if (argument instanceof Identifier) {
-          const value = parseExpression()
+          // HubL supports embedding `{{ ... }}` expressions inside tag attribute
+          // values (common in `{% video_player player_id={{ data.id }} %}`).
+          // Treat `key={{ expr }}` as `key=expr` for AST purposes.
+          let value: Statement
+          if (is(TOKEN_TYPES.OpenExpression)) {
+            const openExpr = tokens[current++] // consume '{{'
+            value = parseExpression()
+            value.addChild(openExpr, "openToken")
+            value.addChild(
+              expect(TOKEN_TYPES.CloseExpression, "'}}'"),
+              "closeToken",
+            )
+          } else {
+            value = parseExpression()
+          }
           args.push(new KeywordArgumentExpression(argument, value, equalsToken))
           continue
         }
@@ -899,6 +913,17 @@ export function parse(
 
   function parseIfExpression(): Statement {
     const a = parseLogicalOrExpression()
+
+    // HubL-style ternary operator: condition ? trueExpr : falseExpr
+    // (right-associative, like JS)
+    if (is(TOKEN_TYPES.QuestionMark)) {
+      const questionToken = tokens[current++] // consume '?'
+      const trueExpr = parseIfExpression()
+      const colonToken = expect(TOKEN_TYPES.Colon, "':'")
+      const falseExpr = parseIfExpression()
+      return new Ternary(a, trueExpr, falseExpr, questionToken, colonToken)
+    }
+
     if (isIdentifier("if")) {
       // Ternary expression
       const ifToken = tokens[current++] // consume 'if'
@@ -919,7 +944,7 @@ export function parse(
 
   function parseLogicalOrExpression(): Statement {
     let left = parseLogicalAndExpression()
-    while (isIdentifier("or")) {
+    while (isIdentifier("or") || is(TOKEN_TYPES.LogicalOrOperator)) {
       const operator = tokens[current]
       ++current
       const right = parseLogicalAndExpression()
@@ -930,7 +955,7 @@ export function parse(
 
   function parseLogicalAndExpression(): Statement {
     let left = parseLogicalNegationExpression()
-    while (isIdentifier("and")) {
+    while (isIdentifier("and") || is(TOKEN_TYPES.LogicalAndOperator)) {
       const operator = tokens[current]
       ++current
       const right = parseLogicalNegationExpression()

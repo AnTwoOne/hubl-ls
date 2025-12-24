@@ -194,9 +194,21 @@ export const getType = (
     ) {
       return leftType
     } else if (
-      ["and", "or", "not", "==", "!=", ">", ">=", "<", "<="].includes(
-        expression.operator.value,
-      )
+      [
+        "and",
+        "or",
+        "not",
+        "&&",
+        "||",
+        "==",
+        "!=",
+        "===",
+        "!==",
+        ">",
+        ">=",
+        "<",
+        "<=",
+      ].includes(expression.operator.value)
     ) {
       return resolveType("bool")
     }

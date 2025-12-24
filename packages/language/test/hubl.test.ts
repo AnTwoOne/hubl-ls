@@ -42,4 +42,38 @@ describe("HubL compatibility (language package)", () => {
     const tokens = tokenize(text)
     expect(() => parse(tokens)).toThrowError()
   })
+
+  it("accepts dict/object literals inside `{% set ... %}` with whitespace-trim closers (`-%}`)", () => {
+    const text = [
+      "{%- set accepts = {",
+      "  'a': 'a',",
+      "  'b': 'b',",
+      "} -%}",
+    ].join("\n")
+
+    const [tokens, lexerErrors] = tokenize(text, {}, true)
+    const [program, , parserErrors] = parse(tokens, true)
+
+    expect(lexerErrors).toHaveLength(0)
+    expect(parserErrors).toHaveLength(0)
+
+    // Sanity: top-level should contain a Set statement.
+    expect(program.body.some((n) => n.type === "Set")).toBe(true)
+  })
+
+  it("accepts embedded `{{ ... }}` inside HubL tag attribute values and JS-style `||`", () => {
+    const text = [
+      "{%- video_player ",
+      "  player_id={{ data.player_id }},",
+      "  type={{ data.player_type || 'scriptV4' }}",
+      "-%}",
+    ].join("\n")
+
+    const [tokens, lexerErrors] = tokenize(text, {}, true)
+    const [program, , parserErrors] = parse(tokens, true)
+
+    expect(lexerErrors).toHaveLength(0)
+    expect(parserErrors).toHaveLength(0)
+    expect(program.body.some((n) => n.type === "TagStatement")).toBe(true)
+  })
 })

@@ -124,6 +124,10 @@ export const getCompletion = async (
 
   const offset = document.offsetAt(position)
   const token = tokenAt(tokens, offset)
+  // VS Code can request completion when the cursor is between tokens (e.g.
+  // `{{ data. }}` with the cursor after the `.` but before `}}`). In that case
+  // `tokenAt(offset)` may return the *next* token. Keep a stable look-behind.
+  const tokenBefore = offset > 0 ? tokenAt(tokens, offset - 1) : token
   if (!token || token.type === "Text") {
     return
   }
@@ -278,48 +282,64 @@ export const getCompletion = async (
       label: symbolName,
       kind: lsp.CompletionItemKind.Function,
     }))
-  } else if (token.parent instanceof ast.MemberExpression) {
-    const object = token.parent.object
-    const symbolType = getType(object, document)
-    const resolvedType = resolveType(symbolType)
+  } else {
+    // Member completion should work when the cursor is on the `.` / `[` token
+    // (trigger character path), when it's inside the property identifier, *and*
+    // when it's between the `.` and the next token.
+    const memberExpression = (parentOfType(token, "MemberExpression") ??
+      parentOfType(tokenBefore, "MemberExpression")) as
+      | ast.MemberExpression
+      | undefined
 
-    if (resolvedType !== undefined) {
-      const completions: lsp.CompletionItem[] = []
-      for (const [key, value] of Object.entries(
-        resolvedType.properties ?? {},
-      )) {
-        // Don't show array indexing as properties
-        if (!isNaN(parseInt(key, 10))) {
-          continue
-        }
+    if (
+      memberExpression !== undefined &&
+      memberExpression.openToken?.start !== undefined &&
+      memberExpression.openToken.start <= offset
+    ) {
+      const object = memberExpression.object
+      const symbolType = getType(object, document)
+      const resolvedType = resolveType(symbolType)
 
-        let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Property
-        let documentation: lsp.MarkupContent | string | undefined = undefined
-        const valueType = resolveType(value)
-        if (valueType?.signature) {
-          kind = lsp.CompletionItemKind.Method
-          const docs =
-            valueType?.signature?.documentation ?? symbolType?.documentation
-          documentation = {
-            kind: "markdown",
-            value:
-              "```python\n" +
-              stringifySignatureInfo(valueType.signature) +
-              "\n```" +
-              (docs !== undefined ? "\n" + docs : ""),
+      if (resolvedType !== undefined) {
+        const completions: lsp.CompletionItem[] = []
+        for (const [key, value] of Object.entries(
+          resolvedType.properties ?? {},
+        )) {
+          // Don't show array indexing as properties
+          if (!isNaN(parseInt(key, 10))) {
+            continue
           }
-        } else if (
-          typeof value !== "string" &&
-          value.documentation !== undefined
-        ) {
-          documentation = value.documentation
+
+          let kind: lsp.CompletionItemKind = lsp.CompletionItemKind.Property
+          let documentation: lsp.MarkupContent | string | undefined = undefined
+          const valueType = resolveType(value)
+          if (valueType?.signature) {
+            kind = lsp.CompletionItemKind.Method
+            const docs =
+              valueType?.signature?.documentation ?? symbolType?.documentation
+            documentation = {
+              kind: "markdown",
+              value:
+                "```python\n" +
+                stringifySignatureInfo(valueType.signature) +
+                "\n```" +
+                (docs !== undefined ? "\n" + docs : ""),
+            }
+          } else if (
+            typeof value !== "string" &&
+            value.documentation !== undefined
+          ) {
+            documentation = value.documentation
+          }
+          completions.push({ label: key, kind, documentation })
         }
-        completions.push({ label: key, kind, documentation })
+        return completions
       }
-      return completions
     }
-  } else if (token.parent !== undefined) {
-    const symbols = findSymbolsInScope(token.parent, "Variable", document)
-    return symbolsToCompletionItems(symbols)
+
+    if (token.parent !== undefined) {
+      const symbols = findSymbolsInScope(token.parent, "Variable", document)
+      return symbolsToCompletionItems(symbols)
+    }
   }
 }

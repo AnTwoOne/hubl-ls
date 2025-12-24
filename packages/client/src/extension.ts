@@ -45,6 +45,20 @@ const HUBL_LANGUAGE_IDS = [
 
 const toFileSelector = (language: string) => ({ scheme: "file", language })
 
+// Fallback: HubSpot CMS files are commonly plain `.html` / `.css` / `.js` etc.
+// Even when a HubL language-id extension isn't installed (or a file isn't
+// associated with it), we still want the LSP to attach.
+const HUBL_FILE_GLOBS = [
+  "**/*.html",
+  "**/*.css",
+  "**/*.js",
+  "**/*.json",
+  "**/*.xml",
+  "**/*.yaml",
+  "**/*.yml",
+  "**/*.md",
+]
+
 const SetGlobalsRequest = new lsp.RequestType<
   { globals: Record<string, unknown>; uri: string | undefined; merge: boolean },
   { success: boolean },
@@ -142,28 +156,14 @@ export const activate = async (context: vscode.ExtensionContext) => {
   // Companion-mode support:
   // - Attach to HubSpot CMS / HubL language ids when they exist.
   // - Do not contribute languages/grammars ourselves (avoid conflicts with HubSpot extension).
-  log(
-    "activate(): fetching available languages via vscode.languages.getLanguages()",
-  )
-  const t2 = setTimeout(() => {
-    log(
-      "activate(): still waiting for vscode.languages.getLanguages() after 5000ms",
-    )
-  }, 5000)
-  const availableLanguageIds = new Set(await vscode.languages.getLanguages())
-  clearTimeout(t2)
-  log(
-    `activate(): vscode.languages.getLanguages() returned ${availableLanguageIds.size} ids`,
-  )
-  const hublSelectors = HUBL_LANGUAGE_IDS.filter((id) =>
-    availableLanguageIds.has(id),
-  )
-  log(
-    `activate(): hubspot selectors enabled = ${JSON.stringify(hublSelectors)}`,
-  )
-
-  const documentSelector: lsp.DocumentSelector =
-    hublSelectors.map(toFileSelector)
+  // IMPORTANT: do not gate the documentSelector on `vscode.languages.getLanguages()`.
+  // In some VS Code / e2e environments, contributed language ids can appear late or
+  // `getLanguages()` can be temporarily incomplete, which leads to flaky registration
+  // (hover/completion providers never attach).
+  const documentSelector: lsp.DocumentSelector = [
+    ...HUBL_LANGUAGE_IDS.map(toFileSelector),
+    ...HUBL_FILE_GLOBS.map((pattern) => ({ scheme: "file", pattern })),
+  ]
   log(
     `activate(): documentSelector language count = ${documentSelector.length}`,
   )

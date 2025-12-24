@@ -4,6 +4,7 @@ import { activate, getDocUri } from "./helper"
 
 suite("Should provide completions", () => {
   const hublUri = getDocUri("hubl-completions.html")
+  const macroDocsUri = getDocUri("macro-docs.html")
 
   test("Returns HubL completions (tags, globals, filters)", async () => {
     // Tag-name completion while editing an unknown TagStatement name.
@@ -49,6 +50,24 @@ suite("Should provide completions", () => {
     ).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ label: "escapejs", kind: "Function" }),
+      ]),
+    )
+  })
+
+  test("Completes macro param properties from JSDoc-like @property docs", async () => {
+    // In macro-docs.html, the macro `SectionWrapper(data)` documents properties via:
+    //   @property {string} data.section_id
+    //   @property {object} data.section_styles
+    const completions = await getCompletions(
+      macroDocsUri,
+      // Line contains `  {{ data. }}`.
+      new vscode.Position(9, 10),
+    )
+
+    expect(completions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "section_id", kind: "Property" }),
+        expect.objectContaining({ label: "section_styles", kind: "Property" }),
       ]),
     )
   })
