@@ -8,7 +8,7 @@ import * as lsp from "vscode-languageclient/node"
 let client: lsp.LanguageClient
 let clientBecameRunning = false
 
-const output = vscode.window.createOutputChannel("Jinja Language Server", {
+const output = vscode.window.createOutputChannel("HubL Language Server", {
   log: true,
 })
 
@@ -74,7 +74,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
   if (context.extensionMode === vscode.ExtensionMode.Development) {
     const logDir = vscode.Uri.joinPath(context.extensionUri, ".vscode")
     await vscode.workspace.fs.createDirectory(logDir)
-    serverLogFile = vscode.Uri.joinPath(logDir, "jinja-ls-server.log").fsPath
+    serverLogFile = vscode.Uri.joinPath(logDir, "hubl-ls-server.log").fsPath
 
     // Ensure the server process inherits the env var even if fork options are ignored.
     process.env.JINJA_LS_LOG_FILE = serverLogFile
@@ -190,8 +190,8 @@ export const activate = async (context: vscode.ExtensionContext) => {
   }
 
   client = new lsp.LanguageClient(
-    "jinja-ls",
-    "Jinja Language Server",
+    "hubl-ls",
+    "HubL Language Server",
     serverOptions,
     clientOptions,
   )

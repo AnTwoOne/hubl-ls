@@ -1,5 +1,5 @@
 {
-  "name": "jinja-ls",
+  "name": "hubl-ls",
   "private": "true",
   "main": "./dist/extension",
   "scripts": {
@@ -10,8 +10,8 @@
     "test-language": "vitest run --root packages/language",
     "lint": "npm run eslint packages"
   },
-  "displayName": "Jinja Language Server",
-  "description": "Feature-rich language server for Jinja.",
+  "displayName": "HubL Language Server",
+  "description": "Language server for HubSpot CMS HubL templates.",
   "version": "0.0.12",
   "author": "Noam Zaks <noam@noamzaks.com> (https://noamzaks.com/)",
   "icon": "images/icon-1024.png",
@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/noamzaks/jinja-ls"
+    "url": "https://github.com/HubSpot/hubl-ls"
   },
   "workspaces": [
     "packages/*"
@@ -57,15 +57,15 @@
     "commands": [
       {
         "command": "jinjaLS.restart",
-        "title": "Jinja LS: Restart Server"
+        "title": "HubL LS: Restart Server"
       },
       {
         "command": "jinjaLS.setGlobalsFromFile",
-        "title": "Jinja LS: Set Globals From File"
+        "title": "HubL LS: Set Globals From File"
       }
     ],
     "configuration": {
-      "title": "Jinja LS",
+      "title": "HubL LS",
       "properties": {
         "jinjaLS.extraFileExtensions": {
           "title": "Extra File Extensions",

@@ -1,119 +1,104 @@
 <h1 align="center">
-    Jinja Language Server
-    <br />
-    <img src="https://img.shields.io/badge/license-MIT-blue.svg">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg">
-    <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/noamzaks/jinja-ls/check.yml">
-    <img alt="Visual Studio Marketplace Version" src="https://img.shields.io/visual-studio-marketplace/v/noamzaks.jinja-ls">
-    <br />
+  HubL Language Server
+  <br />
+  <code>hubl-ls</code>
+  <br />
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg">
 </h1>
 
 <p align="center">
-    <b>Feature-rich language server for Jinja.</b>
+  <b>Language Server Protocol (LSP) implementation for HubSpot CMS HubL templates.</b>
 </p>
 
-Jinja Language Server is in early development, please report bugs on GitHub!
+This project is evolving from a Jinja-focused language server into a HubL-first one.
+
+## What this extension is
+
+`hubl-ls` provides IDE features (diagnostics, completion, hover, go-to-definition, etc.) for HubL inside HubSpot CMS themes/modules.
+
+It is designed to run in <b>companion mode</b>:
+
+- If you already have a HubSpot HubL VS Code extension that contributes HubL language IDs (e.g. `html-hubl`), `hubl-ls` attaches to those documents and provides LSP features.
+- If you don't, it can still attach by file pattern (e.g. `**/*.html`, `**/*.css`, `**/*.js`) so HubL editing still works.
 
 ## Features
 
-- [x] Provide diagnostics for lexing and parsing errors
-- [x] Provide semantic highlighting
-- [x] Make lexer and parser error tolerant
-- [x] Provide hover for variables and macros
-- [x] Provide go to definition for blocks, macros and variables
-- [x] Provide signature help for macros and globals
-- [x] Resolve imports
-- [x] Provide symbols from imports
-- [x] Track types of expressions including globals and special symbols
-- [x] Provide auto-complete for built-in tests and filters and variables
-- [x] Provide an API for other extensions to add globals
-- [x] Support custom import directories
-- [x] Provide documentation for user-defined symbols
-- [ ] Provide format document
-- [ ] Provide document symbols
-- [ ] Support embedded code languages in Markdown (hover, signature help, semantic highlighting, diagnostics)
-- [ ] Make lexer/parser more performant (incremental)
-- [ ] Support custom start/end symbols (instead of `{{, {%, {#`)
-- [ ] Rewrite in rust
+- Diagnostics (lexer + parser)
+- Semantic highlighting
+- Hover for HubL tags, globals, macros, and variables
+- Go to definition for macros, blocks, and variables
+- Signature help for macros and selected globals
+- Import/include/extends resolution + symbol collection across files
+- Completion for:
+  - HubL tags
+  - globals, tests, filters
+  - member expressions (`content.id`, etc.)
+  - macro parameter properties via JSDoc-like docs (`@property`)
 
 ## Demo
 
-Errors are shown using the awesome [Error Lens](https://marketplace.visualstudio.com/items?itemName=usernamehw.errorlens) extension!
+Errors are shown using the [Error Lens](https://marketplace.visualstudio.com/items?itemName=usernamehw.errorlens) extension.
 
-![autocomplete filters demo](./images/demo-autocomplete-filter.png)
 ![autocomplete globals demo](./images/demo-autocomplete-globals.png)
-![autocomplete str demo](./images/demo-autocomplete-str.png)
-![autocomplete tests demo](./images/demo-autocomplete-test.png)
 ![autocomplete diagnostics demo](./images/demo-diagnostics.png)
-![include analysis demo](./images/demo-include.png)
 ![macro signature demo](./images/demo-macro-signature.png)
 
 ## Usage
 
 ### Configuration
 
-- In VSCode settings you may add directorie paths to "Jinjs LS: Import Paths" to be searched in include/import/from import/extends statements.
-- You can also define extra tests, filters and globals that are available in your environment.
-- The "Jinja LS: Extra File Extensions" option can be used to show path completion for additional file extensions.
+Settings are currently still under the historical `jinjaLS.*` namespace.
 
-### Documentation
+- Add additional import search roots via `jinjaLS.importPaths`.
+- Add extra file extensions for import path completion via `jinjaLS.extraFileExtensions`.
+- Define environment-specific globals/tests/filters via `jinjaLS.extraGlobals` / `jinjaLS.extraTests` / `jinjaLS.extraFilters`.
 
-You can document your custom macros and variables like so:
+### Documenting macros (recommended)
 
-```jinja
-{# Shows a solution for multiplying x by y. #}
-{# @param {int} x: the first number #}
-{# @param {int} y: the second number #}
-{% macro example(x, y) %}
-I can solve {{ x }} * {{ y }} - it's clearly {{ x * y }}!
+`hubl-ls` can use JSDoc-like comments to improve hover/signature/completion.
+
+```hubl
+{#
+@param {object} data - Input dictionary
+@property {string} data.section_id - Section id
+@property {object} data.section_styles - Nested style object
+@property {string} data.section_styles.background_color - Background color
+#}
+{% macro SectionWrapper(data) %}
+  {{ data.section_id }}
+  {{ data. }}
 {% endmacro %}
-
-{#- a magical string! -#}
-{% set magic = "hello" %}
 ```
 
-### LS Commands
+### LS commands (inline)
 
-You can specify LS commands using Jinja comments, for example:
+You can drive some behavior via special comments:
 
-```jinja
+```hubl
 {#- jinja-ls: globals ./globals.json -#}
 ```
 
-adds globals from the `./globals.json` file (relative to the document) to the given document!
+This loads globals from a JSON file (relative to the current document) for analysis.
 
-### Custom Globals
+### Programmatic globals (from other extensions)
 
-You can add globals from your extension with the `jinjaLS.addGlobals` command, for example:
+Other extensions can push extra globals into the server using [`jinjaLS.setGlobals`](package.json:58).
 
 ```ts
 vscode.commands.executeCommand("jinjaLS.setGlobals", {
-  hi: "hello",
-  other: 1574,
-  test: 1.2,
-  deep: { object: [1, 2] },
+  content: { id: 123 },
 })
 ```
 
-This merges the existing globals set by previous calls to `jinjaLS.addGlobals`, if you wish to remove them set the third parameter `merge` to false:
+## Credits / provenance
 
-```ts
-vscode.commands.executeCommand(
-  "jinjaLS.setGlobals",
-  {
-    hi: "hello",
-  },
-  undefined,
-  false,
-)
-```
+This repository is derived from the upstream Jinja language server by Noam Zaks.
 
-You may also specify a URI string for the globals with the second argument so the globals are only defined for that document.
+- Original upstream: https://github.com/noamzaks/jinja-ls
+- The HubL-oriented changes in this fork focus on HubSpot template syntax and companion-mode integration.
 
 ## Acknowledgements
 
-- The [language](./packages/language/) package is based on [@huggingface/jinja](https://github.com/huggingface/huggingface.js/tree/main/packages/jinja), licensed under MIT by Hugging Face.
-- The client is heavily based on [jinjahtml-vscode](https://github.com/samuelcolvin/jinjahtml-vscode), licensed under MIT by Samuel Colvin and other Contributors. In particular, the awesome syntaxes and the language configuration are included with only a few modifications!
-- The overall layout as well as many code samples are taken from Microsoft's [lsp-sample](https://github.com/microsoft/vscode-extension-samples/tree/main/lsp-sample) licensed under MIT.
-- Some of the Jinja documentation is also provided (licensed under MIT), and some of the Python documentation as well (licensed under zero-clause BSD)
-- Special thank you to Omri for the original idea.
+- The language package was originally based on `@huggingface/jinja` (MIT).
+- The client structure was originally based on `jinjahtml-vscode` (MIT).
+- The overall layout and some samples were inspired by Microsoft's `lsp-sample` (MIT).

@@ -13,7 +13,7 @@ suite("Companion mode (HubSpot language ids)", () => {
     }
 
     // Activate extension.
-    const ext = vscode.extensions.getExtension("noamzaks.jinja-ls")!
+    const ext = vscode.extensions.getExtension("noamzaks.hubl-ls")!
     await ext.activate()
 
     const uri = getDocUri("hubl-valid.html")
