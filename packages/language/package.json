@@ -1,5 +1,5 @@
 {
-  "name": "@jinja-ls/language",
+  "name": "@hubl-ls/language",
   "version": "0.0.1",
   "private": true,
   "main": "./src/index.ts"

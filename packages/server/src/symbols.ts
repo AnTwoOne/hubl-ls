@@ -1,4 +1,4 @@
-import { ast, formatExpression } from "@jinja-ls/language"
+import { ast, formatExpression } from "@hubl-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
 import { BUILTIN_TYPES } from "./builtinTypes"
@@ -451,9 +451,9 @@ export const collectSymbols = (
     imports.push(statement)
   } else if (
     statement instanceof ast.Comment &&
-    statement.value.trim().startsWith("jinja-ls:")
+    statement.value.trim().startsWith("hubl-ls:")
   ) {
-    lsCommands.push(statement.value.trim().slice("jinja-ls:".length).trim())
+    lsCommands.push(statement.value.trim().slice("hubl-ls:".length).trim())
   }
 }
 

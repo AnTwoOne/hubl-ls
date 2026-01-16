@@ -63,7 +63,7 @@ const SetGlobalsRequest = new lsp.RequestType<
   { globals: Record<string, unknown>; uri: string | undefined; merge: boolean },
   { success: boolean },
   void
->("jinja/setGlobals")
+>("hubl/setGlobals")
 
 export const activate = async (context: vscode.ExtensionContext) => {
   log("activate(): start")
@@ -77,7 +77,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
     serverLogFile = vscode.Uri.joinPath(logDir, "hubl-ls-server.log").fsPath
 
     // Ensure the server process inherits the env var even if fork options are ignored.
-    process.env.JINJA_LS_LOG_FILE = serverLogFile
+    process.env.HUBL_LS_LOG_FILE = serverLogFile
     log(`activate(): server log file = ${serverLogFile}`)
   }
   const htmlExtension = vscode.extensions.getExtension(
@@ -134,7 +134,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
         ? {
             env: {
               ...process.env,
-              JINJA_LS_LOG_FILE: serverLogFile,
+              HUBL_LS_LOG_FILE: serverLogFile,
             },
           }
         : undefined,
@@ -146,7 +146,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
         ? {
             env: {
               ...process.env,
-              JINJA_LS_LOG_FILE: serverLogFile,
+              HUBL_LS_LOG_FILE: serverLogFile,
             },
           }
         : undefined,
@@ -208,7 +208,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
     }
   })
 
-  client.onRequest("jinja/readFile", async ({ uri }: { uri: string }) => {
+  client.onRequest("hubl/readFile", async ({ uri }: { uri: string }) => {
     try {
       const document = await vscode.workspace.openTextDocument(
         vscode.Uri.parse(uri).fsPath,
@@ -220,7 +220,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
   })
 
   client.onRequest(
-    "jinja/listDirectories",
+    "hubl/listDirectories",
     async ({ uris }: { uris: string[] }) => {
       try {
         const result = []
@@ -259,8 +259,8 @@ export const activate = async (context: vscode.ExtensionContext) => {
   }, 15000)
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("jinjaLS.restart", () => client.restart()),
-    vscode.commands.registerCommand("jinjaLS.setGlobalsFromFile", () => {
+    vscode.commands.registerCommand("hublLS.restart", () => client.restart()),
+    vscode.commands.registerCommand("hublLS.setGlobalsFromFile", () => {
       if (!vscode.window.activeTextEditor) {
         return
       }
@@ -325,7 +325,7 @@ export const activate = async (context: vscode.ExtensionContext) => {
         })
     }),
     vscode.commands.registerCommand(
-      "jinjaLS.setGlobals",
+      "hublLS.setGlobals",
       (globals: Record<string, unknown>, uri?: string, merge = true) =>
         client.sendRequest(SetGlobalsRequest, { globals, uri, merge }),
     ),

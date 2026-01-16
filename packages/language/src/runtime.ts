@@ -522,7 +522,7 @@ export class Environment {
 
   /**
    * Set variable in the current scope.
-   * See https://jinja.palletsprojects.com/en/3.0.x/templates/#assignments for more information.
+   * See https://jinja.palletsprojects.com/en/3.0.x/templates/#assignments for more information (HubL is based on Jinja).
    */
   setVariable(name: string, value: AnyRuntimeValue): AnyRuntimeValue {
     this.variables.set(name, value)
@@ -1231,7 +1231,7 @@ export class Interpreter {
     statements: Statement[],
     environment: Environment,
   ): StringValue {
-    // Jinja templates always evaluate to a String,
+    // HubL/Jinja templates always evaluate to a String,
     // so we accumulate the result of each statement into a final string
 
     let result = ""

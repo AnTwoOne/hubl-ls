@@ -1,4 +1,4 @@
-import { ast } from "@jinja-ls/language"
+import { ast } from "@hubl-ls/language"
 import * as lsp from "vscode-languageserver"
 import { HOVER_LITERAL_MAX_LENGTH } from "./constants"
 import { HUBL_PROGRAM_SYMBOLS, HUBL_TAG_TYPES } from "./hublBuiltins"
@@ -111,7 +111,7 @@ export const getHover = async (uri: string, position: lsp.Position) => {
       return {
         contents: [
           {
-            language: "jinja",
+            language: "hubl",
             value: symbolDocument.getText(
               lsp.Range.create(
                 symbolDocument.positionAt(symbol.node.openToken.start),
@@ -155,7 +155,7 @@ export const getHover = async (uri: string, position: lsp.Position) => {
       return {
         contents: [
           {
-            language: "jinja",
+            language: "hubl",
             value: sourceText,
           },
         ],

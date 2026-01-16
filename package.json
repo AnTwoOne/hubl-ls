@@ -13,27 +13,24 @@
   "displayName": "HubL Language Server",
   "description": "Language server for HubSpot CMS HubL templates.",
   "version": "0.0.12",
-  "author": "Noam Zaks <noam@noamzaks.com> (https://noamzaks.com/)",
+  "author": "AnTwoOne",
   "icon": "images/icon-1024.png",
   "license": "MIT",
-  "sponsor": {
-    "url": "https://github.com/sponsors/noamzaks"
-  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/HubSpot/hubl-ls"
+    "url": "https://github.com/AnTwoOne/hubl-ls"
   },
   "workspaces": [
     "packages/*"
   ],
-  "publisher": "noamzaks",
+  "publisher": "AnTwoOne",
   "engines": {
     "vscode": "^1.75.0"
   },
   "activationEvents": [
-    "onCommand:jinjaLS.restart",
-    "onCommand:jinjaLS.setGlobalsFromFile",
-    "onCommand:jinjaLS.setGlobals",
+    "onCommand:hublLS.restart",
+    "onCommand:hublLS.setGlobalsFromFile",
+    "onCommand:hublLS.setGlobals",
     "onLanguage:hubl",
     "onLanguage:hubl-html",
     "onLanguage:hubl-css",
@@ -56,34 +53,34 @@
   "contributes": {
     "commands": [
       {
-        "command": "jinjaLS.restart",
+        "command": "hublLS.restart",
         "title": "HubL LS: Restart Server"
       },
       {
-        "command": "jinjaLS.setGlobalsFromFile",
+        "command": "hublLS.setGlobalsFromFile",
         "title": "HubL LS: Set Globals From File"
       }
     ],
     "configuration": {
       "title": "HubL LS",
       "properties": {
-        "jinjaLS.extraFileExtensions": {
+        "hublLS.extraFileExtensions": {
           "title": "Extra File Extensions",
-          "description": "Extra file extension to match as Jinja for import completions",
+          "description": "Extra file extension to match as HubL for import completions",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "jinjaLS.importPaths": {
+        "hublLS.importPaths": {
           "title": "Import Paths",
-          "description": "Additional paths to search for include/import/extends, e.g. C:\\jinja or /etc/jinja",
+          "description": "Additional paths to search for include/import/extends, e.g. C:\\hubl or /etc/hubl",
           "type": "array",
           "items": {
             "type": "string"
           }
         },
-        "jinjaLS.importURIs": {
+        "hublLS.importURIs": {
           "title": "Import URIs",
           "description": "Additional URIs to search for include/import/extends. You should probably use Import Paths instead, only use this if you know what you're doing.",
           "type": "array",
@@ -91,7 +88,7 @@
             "type": "string"
           }
         },
-        "jinjaLS.extraGlobals": {
+        "hublLS.extraGlobals": {
           "title": "Extra Globals",
           "description": "Additional globals that are defined in the environment",
           "type": "object",
@@ -150,7 +147,7 @@
             "required": []
           }
         },
-        "jinjaLS.extraTests": {
+        "hublLS.extraTests": {
           "title": "Extra Tests",
           "description": "Additional tests that are defined in the environment",
           "type": "object",
@@ -199,7 +196,7 @@
             ]
           }
         },
-        "jinjaLS.extraFilters": {
+        "hublLS.extraFilters": {
           "title": "Extra Filters",
           "description": "Additional filters that are defined in the environment",
           "type": "object",

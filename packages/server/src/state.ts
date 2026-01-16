@@ -1,4 +1,4 @@
-import { ast, LexerError } from "@jinja-ls/language"
+import { ast, LexerError } from "@hubl-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI } from "vscode-uri"
 import { BUILTIN_FILTERS, BUILTIN_TESTS } from "./constants"

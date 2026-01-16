@@ -1,4 +1,4 @@
-import { ast, formatExpression } from "@jinja-ls/language"
+import { ast, formatExpression } from "@hubl-ls/language"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { BUILTIN_TYPES } from "./builtinTypes"
 import { getFilters } from "./state"

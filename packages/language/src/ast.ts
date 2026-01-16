@@ -129,7 +129,7 @@ export class Statement extends Node {
 
 /**
  * A permissive statement node for `{% tag ... %}` constructs that are not part of the
- * explicit Jinja statement list supported by this parser.
+ * explicit HubL/Jinja statement list supported by this parser.
  *
  * This is used to support HubL tags (e.g. `{% module ... %}`) without emitting
  * parser errors, while still keeping the raw token range via `openToken/identifier/closeToken`.

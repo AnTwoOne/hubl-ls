@@ -37,7 +37,7 @@ describe("HubL compatibility (language package)", () => {
     expect(kwargNames).toEqual(["label", "no_wrapper", "path"])
   })
 
-  it("still throws for stray Jinja control-structure closers", () => {
+  it("still throws for stray HubL/Jinja control-structure closers", () => {
     const text = "{% endfor %}"
     const tokens = tokenize(text)
     expect(() => parse(tokens)).toThrowError()

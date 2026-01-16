@@ -47,11 +47,11 @@ Errors are shown using the [Error Lens](https://marketplace.visualstudio.com/ite
 
 ### Configuration
 
-Settings are currently still under the historical `jinjaLS.*` namespace.
+Settings are under the `hublLS.*` namespace.
 
-- Add additional import search roots via `jinjaLS.importPaths`.
-- Add extra file extensions for import path completion via `jinjaLS.extraFileExtensions`.
-- Define environment-specific globals/tests/filters via `jinjaLS.extraGlobals` / `jinjaLS.extraTests` / `jinjaLS.extraFilters`.
+- Add additional import search roots via `hublLS.importPaths`.
+- Add extra file extensions for import path completion via `hublLS.extraFileExtensions`.
+- Define environment-specific globals/tests/filters via `hublLS.extraGlobals` / `hublLS.extraTests` / `hublLS.extraFilters`.
 
 ### Documenting macros (recommended)
 
@@ -75,27 +75,27 @@ Settings are currently still under the historical `jinjaLS.*` namespace.
 You can drive some behavior via special comments:
 
 ```hubl
-{#- jinja-ls: globals ./globals.json -#}
+{#- hubl-ls: globals ./globals.json -#}
 ```
 
 This loads globals from a JSON file (relative to the current document) for analysis.
 
 ### Programmatic globals (from other extensions)
 
-Other extensions can push extra globals into the server using [`jinjaLS.setGlobals`](package.json:58).
+Other extensions can push extra globals into the server using [`hublLS.setGlobals`](package.json:58).
 
 ```ts
-vscode.commands.executeCommand("jinjaLS.setGlobals", {
+vscode.commands.executeCommand("hublLS.setGlobals", {
   content: { id: 123 },
 })
 ```
 
 ## Credits / provenance
 
-This repository is derived from the upstream Jinja language server by Noam Zaks.
+This is a HubL-first language server implementation, derived from the upstream Jinja language server by Noam Zaks.
 
 - Original upstream: https://github.com/noamzaks/jinja-ls
-- The HubL-oriented changes in this fork focus on HubSpot template syntax and companion-mode integration.
+- This fork has been refactored to focus on HubSpot HubL template syntax, with HubL-specific builtins, companion-mode integration, and renamed namespaces (`hublLS.*`).
 
 ## Acknowledgements
 

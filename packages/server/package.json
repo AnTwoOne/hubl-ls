@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": "true",
   "dependencies": {
-    "@jinja-ls/language": "workspace:*",
+    "@hubl-ls/language": "workspace:*",
     "toml": "^3.0.0",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.12",

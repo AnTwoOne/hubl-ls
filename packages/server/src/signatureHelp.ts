@@ -1,4 +1,4 @@
-import { ast } from "@jinja-ls/language"
+import { ast } from "@hubl-ls/language"
 import * as lsp from "vscode-languageserver"
 import { documentASTs, documents } from "./state"
 import { getType, resolveType, stringifySignatureInfo } from "./types"

@@ -1,4 +1,4 @@
-import { ast } from "@jinja-ls/language"
+import { ast } from "@hubl-ls/language"
 import * as lsp from "vscode-languageserver"
 import {
   documentASTs,
@@ -29,7 +29,7 @@ export const getDefinition = async (uri: string, position: lsp.Position) => {
     | undefined
 
   // Handle namespaced macro calls, e.g.
-  // `{% import "lib.jinja" as lib %}` then `{{ lib.example() }}`.
+  // `{% import "lib.hubl" as lib %}` then `{{ lib.example() }}`.
   // In this case the call callee is a MemberExpression, not an Identifier.
   if (
     callExpression !== undefined &&

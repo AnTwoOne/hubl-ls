@@ -13,10 +13,10 @@ suite("Companion mode (HubSpot language ids)", () => {
     }
 
     // Activate extension.
-    const ext = vscode.extensions.getExtension("noamzaks.hubl-ls")!
+    const ext = vscode.extensions.getExtension("AnTwoOne.hubl-ls")!
     await ext.activate()
 
-    const uri = getDocUri("hubl-valid.html")
+    const uri = getDocUri("hubl-completions.html")
 
     // Use the shared test harness so we consistently open the document under the
     // HubSpot language id and wait for the language server to process it.
@@ -24,11 +24,12 @@ suite("Companion mode (HubSpot language ids)", () => {
     expect(doc.languageId).toEqual("html-hubl")
 
     // Completion sanity: `content` should be a known global.
+    // Position (3, 5) is at `con` in `{{ con }}` - should suggest `content`
     const completions: vscode.CompletionList =
       await vscode.commands.executeCommand(
         "vscode.executeCompletionItemProvider",
         uri,
-        new vscode.Position(2, 6),
+        new vscode.Position(3, 5),
       )
     const labels = completions.items.map((i) =>
       typeof i.label === "string" ? i.label : i.label.label,

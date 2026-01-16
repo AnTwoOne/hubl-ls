@@ -1,4 +1,4 @@
-import { ast } from "@jinja-ls/language"
+import { ast } from "@hubl-ls/language"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
 import { Utils } from "vscode-uri"
@@ -34,10 +34,12 @@ export const getPathCompletions = async (
   }
 
   const items = await listDirectories(connection, currentUris)
+  // Include HubL and Jinja file extensions for backward compatibility
   return Array.from(new Set(items))
     .filter(
       (item) =>
         item.endsWith("/") ||
+        item.endsWith(".hubl") ||
         item.endsWith(".j2") ||
         item.endsWith(".jinja") ||
         item.endsWith(".jinja2") ||

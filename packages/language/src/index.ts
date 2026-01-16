@@ -1,12 +1,11 @@
 /**
- * @file Jinja templating engine
+ * @file HubL templating engine
  *
- * A minimalistic JavaScript reimplementation of the [Jinja](https://github.com/pallets/jinja) templating engine,
- * to support the chat templates. Special thanks to [Tyler Laceby](https://github.com/tlaceby) for his amazing
+ * A minimalistic JavaScript reimplementation of the HubL/Jinja templating engine.
+ * HubL is based on [Jinja](https://github.com/pallets/jinja) syntax with HubSpot-specific extensions.
+ * Special thanks to [Tyler Laceby](https://github.com/tlaceby) for his amazing
  * ["Guide to Interpreters"](https://github.com/tlaceby/guide-to-interpreters-series) tutorial series,
  * which provided the basis for this implementation.
- *
- * See the [Transformers documentation](https://huggingface.co/docs/transformers/main/en/chat_templating) for more information.
  *
  * @module index
  */

@@ -7,13 +7,13 @@ export const ReadFileRequest = new lsp.RequestType<
   { uri: string },
   { contents: string | undefined },
   void
->("jinja/readFile")
+>("hubl/readFile")
 
 export const ListDirectoriesRequest = new lsp.RequestType<
   { uris: string[] },
   string[],
   void
->("jinja/listDirectories")
+>("hubl/listDirectories")
 
 export const readFile = async (
   connection: lsp.Connection,
@@ -54,7 +54,7 @@ export const setGlobals = (
 
 export const registerCustomCommands = (connection: lsp.Connection) => {
   connection.onRequest(
-    "jinja/setGlobals",
+    "hubl/setGlobals",
     async ({
       globals: globalsToAdd,
       uri,

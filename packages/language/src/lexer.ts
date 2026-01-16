@@ -2,7 +2,7 @@
  * Represents tokens that our language understands in parsing.
  */
 export const TOKEN_TYPES = Object.freeze({
-  Text: "Text", // The text between Jinja statements or expressions
+  Text: "Text", // The text between HubL/Jinja statements or expressions
 
   NumericLiteral: "NumericLiteral", // e.g., 123, 1.0
   StringLiteral: "StringLiteral", // 'string'
@@ -249,7 +249,7 @@ export function tokenize(
 
   // Build each token until end of input
   main: while (cursorPosition < source.length) {
-    // First, consume all text that is outside of a Jinja statement or expression
+    // First, consume all text that is outside of a HubL/Jinja statement or expression
     if (codeDepth === 0 || insideRaw) {
       let text = ""
       if (insideRaw) {
@@ -266,7 +266,7 @@ export function tokenize(
       } else {
         while (
           cursorPosition < source.length &&
-          // Keep going until we hit the next Jinja statement or expression
+          // Keep going until we hit the next HubL/Jinja statement or expression
           !(
             source[cursorPosition] === "{" &&
             (source[cursorPosition + 1] === "%" ||
@@ -355,7 +355,7 @@ export function tokenize(
       continue
     }
 
-    // Consume (and ignore) all whitespace inside Jinja statements or expressions
+    // Consume and ignore all whitespace inside HubL/Jinja statements or expressions
     consumeWhile((char) => /\s/.test(char))
     if (cursorPosition >= source.length) {
       continue

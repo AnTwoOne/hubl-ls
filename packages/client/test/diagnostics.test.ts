@@ -75,12 +75,12 @@ suite("Should provide file diagnostics", () => {
         { severity: 0, message: "Expected identifier" },
         {
           severity: 1,
-          message: "Couldn't find '', maybe add to Jinja LS import paths?",
+          message: "Couldn't find '', maybe add to HubL LS import paths?",
         },
         {
           severity: 1,
           message:
-            "Couldn't find 'somewhere/', maybe add to Jinja LS import paths?",
+            "Couldn't find 'somewhere/', maybe add to HubL LS import paths?",
         },
       ]),
     )

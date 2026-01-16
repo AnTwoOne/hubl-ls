@@ -1,4 +1,4 @@
-import { ast } from "@jinja-ls/language"
+import { ast } from "@hubl-ls/language"
 import * as lsp from "vscode-languageserver"
 import { documentASTs, documentImports, documents } from "./state"
 
@@ -48,7 +48,7 @@ export const getDiagnostics = (uri: string) => {
   for (const [i, uri] of imports ?? []) {
     if (uri === undefined && i.source instanceof ast.StringLiteral) {
       items.push({
-        message: `Couldn't find '${i.source.value}', maybe add to Jinja LS import paths?`,
+        message: `Couldn't find '${i.source.value}', maybe add to HubL LS import paths?`,
         range: lsp.Range.create(
           document.positionAt(i.source.getStart()),
           document.positionAt(i.source.getEnd()),

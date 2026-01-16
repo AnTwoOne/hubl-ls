@@ -24,7 +24,7 @@ suite("Should provide hover", () => {
 
   test("Formats JSDoc-like macro documentation", async () => {
     // Hover macro call: `SectionWrapper(...)`
-    const hover = await getHover(macroDocsUri, new vscode.Position(11, 5))
+    const hover = await getHover(macroDocsUri, new vscode.Position(12, 5))
 
     // Signature should still be shown.
     expect(hover.contents).toEqual(

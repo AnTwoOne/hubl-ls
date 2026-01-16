@@ -1,4 +1,4 @@
-import { ast, parse, tokenize } from "@jinja-ls/language"
+import { ast, parse, tokenize } from "@hubl-ls/language"
 import * as fs from "fs"
 import * as lsp from "vscode-languageserver"
 import { TextDocument } from "vscode-languageserver-textdocument"
@@ -26,8 +26,8 @@ import { collectSymbols, findImport, SymbolInfo } from "./symbols"
 import { walk } from "./utilities"
 
 // Best-effort file logging for server crashes.
-// The client sets JINJA_LS_LOG_FILE via fork env in [`serverOptions`](packages/client/src/extension.ts:1).
-const SERVER_LOG_FILE = process.env.JINJA_LS_LOG_FILE
+// The client sets HUBL_LS_LOG_FILE via fork env in [`serverOptions`](packages/client/src/extension.ts:1).
+const SERVER_LOG_FILE = process.env.HUBL_LS_LOG_FILE
 const serverLog = (msg: string) => {
   if (!SERVER_LOG_FILE) {
     return
@@ -226,7 +226,7 @@ const handleDocument = (document: TextDocument) => {
   if (!configuration.initialized) {
     connection.workspace
       .getConfiguration({
-        section: "jinjaLS",
+        section: "hublLS",
       })
       .then((currentConfiguration) => {
         for (const key in currentConfiguration) {

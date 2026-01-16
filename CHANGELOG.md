@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2025-12-27
+
+### Breaking Changes
+
+- Configuration namespace renamed from `jinjaLS.*` to `hublLS.*`
+  - `jinjaLS.extraFileExtensions` → `hublLS.extraFileExtensions`
+  - `jinjaLS.importPaths` → `hublLS.importPaths`
+  - `jinjaLS.importURIs` → `hublLS.importURIs`
+  - `jinjaLS.extraGlobals` → `hublLS.extraGlobals`
+  - `jinjaLS.extraTests` → `hublLS.extraTests`
+  - `jinjaLS.extraFilters` → `hublLS.extraFilters`
+- VS Code commands renamed from `jinjaLS.*` to `hublLS.*`
+  - `jinjaLS.restart` → `hublLS.restart`
+  - `jinjaLS.setGlobalsFromFile` → `hublLS.setGlobalsFromFile`
+  - `jinjaLS.setGlobals` → `hublLS.setGlobals`
+- Inline LS commands renamed from `jinja-ls:` to `hubl-ls:`
+  - Example: `{#- jinja-ls: globals ./file.json -#}` → `{#- hubl-ls: globals ./file.json -#}`
+
+### Changed
+
+- Internal package renamed from `@jinja-ls/language` to `@hubl-ls/language`
+- LSP request types renamed from `jinja/*` to `hubl/*`
+- Environment variable renamed from `JINJA_LS_LOG_FILE` to `HUBL_LS_LOG_FILE`
+- Error messages now reference "HubL LS" instead of "Jinja LS"
+- Code comments updated to reference "HubL/Jinja" where appropriate
+
+### Added
+
+- Added `.hubl` file extension support for path completions
+
 ## [0.0.12] - 2025-11-02
 
 ### Added
