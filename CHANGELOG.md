@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Find All References support - Navigate to all usages of a symbol (variable, macro, block) across all files in the workspace
+- HubL-specific expression tests: `string_containing`, `string_startingwith`, `truthy`, `containing`, `containingall`, `within`
+
+### Fixed
+
+- Parser now correctly handles HubL-specific expression tests like `is string_containing("text")`
 
 ## [0.1.0] - 2026-01-17
 

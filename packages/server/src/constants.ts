@@ -1065,6 +1065,55 @@ export const BUILTIN_TESTS: Record<string, TypeInfo> = {
       return: "bool",
     },
   },
+  // HubL-specific tests
+  string_containing: {
+    name: "string_containing",
+    signature: {
+      documentation: "Tests whether a provided substring is contained within another string.",
+      arguments: [{ name: "substring", type: "str" }],
+      return: "bool",
+    },
+  },
+  string_startingwith: {
+    name: "string_startingwith",
+    signature: {
+      documentation: "Tests whether a string starts with a particular string.",
+      arguments: [{ name: "prefix", type: "str" }],
+      return: "bool",
+    },
+  },
+  truthy: {
+    name: "truthy",
+    signature: {
+      documentation: "Tests whether an expression evaluates to True.",
+      arguments: [],
+      return: "bool",
+    },
+  },
+  containing: {
+    name: "containing",
+    signature: {
+      documentation: "Checks if a list variable has a specific value in it.",
+      arguments: [{ name: "value" }],
+      return: "bool",
+    },
+  },
+  containingall: {
+    name: "containingall",
+    signature: {
+      documentation: "Tests if a list variable contains all of the values of another list.",
+      arguments: [{ name: "values", type: "list" }],
+      return: "bool",
+    },
+  },
+  within: {
+    name: "within",
+    signature: {
+      documentation: "Tests whether a variable is present within a list.",
+      arguments: [{ name: "list" }],
+      return: "bool",
+    },
+  },
 }
 
 export const BUILTIN_STATEMENTS = [
