@@ -976,6 +976,26 @@ export const HUBL_PROGRAM_SYMBOLS: Record<
       return: "str",
     },
   },
+
+  // Standard includes
+  standard_header_includes: {
+    name: "function",
+    signature: {
+      documentation:
+        "Renders standard HubSpot tracking code and scripts in the <head>. Required in all templates.",
+      arguments: [],
+      return: "str",
+    },
+  },
+  standard_footer_includes: {
+    name: "function",
+    signature: {
+      documentation:
+        "Renders standard HubSpot footer code and scripts before </body>. Required in all templates.",
+      arguments: [],
+      return: "str",
+    },
+  },
 }
 
 export const HUBL_FILTERS: Record<string, TypeInfo> = {
