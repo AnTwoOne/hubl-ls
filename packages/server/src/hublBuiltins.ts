@@ -1504,7 +1504,8 @@ export const HUBL_FILTERS: Record<string, TypeInfo> = {
   replace: {
     name: "replace",
     signature: {
-      documentation: "Replace all instances of a substring with another string.",
+      documentation:
+        "Replace all instances of a substring with another string.",
       arguments: [
         { name: "old", type: "str" },
         { name: "new", type: "str" },

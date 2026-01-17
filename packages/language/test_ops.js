@@ -1,4 +1,4 @@
-import { Template } from './src/index.ts';
+import { Template } from "./src/index.ts"
 
 const template = `
 {{ 5 + 3 }}
@@ -6,12 +6,12 @@ const template = `
 {{ "Hello" ~ " World" }}
 {% if x is string_containing("test") %}found{% endif %}
 {{ score > 50 ? "Pass" : "Fail" }}
-`;
+`
 
 try {
-  const t = new Template(template);
-  console.log('✓ All operators parsed successfully!');
-  console.log('Parsed AST has', t.parsed.body.length, 'statements');
+  const t = new Template(template)
+  console.log("✓ All operators parsed successfully!")
+  console.log("Parsed AST has", t.parsed.body.length, "statements")
 } catch (e) {
-  console.error('✗ Parser error:', e.message);
+  console.error("✗ Parser error:", e.message)
 }

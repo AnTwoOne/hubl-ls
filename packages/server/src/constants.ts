@@ -1085,7 +1085,8 @@ export const BUILTIN_TESTS: Record<string, TypeInfo> = {
   string_containing: {
     name: "string_containing",
     signature: {
-      documentation: "Tests whether a provided substring is contained within another string.",
+      documentation:
+        "Tests whether a provided substring is contained within another string.",
       arguments: [{ name: "substring", type: "str" }],
       return: "bool",
     },
@@ -1117,7 +1118,8 @@ export const BUILTIN_TESTS: Record<string, TypeInfo> = {
   containingall: {
     name: "containingall",
     signature: {
-      documentation: "Tests if a list variable contains all of the values of another list.",
+      documentation:
+        "Tests if a list variable contains all of the values of another list.",
       arguments: [{ name: "values", type: "list" }],
       return: "bool",
     },

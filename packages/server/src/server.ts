@@ -225,23 +225,31 @@ const analyzeDocument = async (document: TextDocument) => {
   }
 }
 
-const handleDocument = (document: TextDocument) => {
-  analyzeDocument(document)
-
-  if (!configuration.initialized) {
-    connection.workspace
-      .getConfiguration({
-        section: "hublLS",
-      })
-      .then((currentConfiguration) => {
-        for (const key in currentConfiguration) {
-          configuration[key] = currentConfiguration[key]
-        }
-        configuration.initialized = true
-        analyzeDocument(document)
-      })
+const loadConfiguration = async () => {
+  const currentConfiguration = await connection.workspace.getConfiguration({
+    section: "hublLS",
+  })
+  for (const key in currentConfiguration) {
+    configuration[key] = currentConfiguration[key]
   }
+  configuration.initialized = true
 }
+
+const handleDocument = async (document: TextDocument) => {
+  if (!configuration.initialized) {
+    await loadConfiguration()
+  }
+  analyzeDocument(document)
+}
+
+// Reload configuration when settings change
+connection.onDidChangeConfiguration(async () => {
+  await loadConfiguration()
+  // Re-analyze all open documents with new configuration
+  for (const document of documents.values()) {
+    analyzeDocument(document)
+  }
+})
 
 // Ensure we analyze documents on open as well as on change.
 // (Some clients/tests open a document and immediately request hover/completions

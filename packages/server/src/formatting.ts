@@ -12,9 +12,7 @@ export function getDocumentFormatting(
 
   try {
     // Use tab size from formatting options, defaulting to 2 spaces
-    const indent = params.options.insertSpaces
-      ? params.options.tabSize
-      : "\t"
+    const indent = params.options.insertSpaces ? params.options.tabSize : "\t"
 
     const formatted = format(astData.program, indent)
 

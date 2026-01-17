@@ -315,12 +315,18 @@ function findReferencesInDocument(
       let targetNode: ast.Node = node
 
       // For call expressions, highlight the identifier part
-      if (node instanceof ast.CallExpression && node.callee instanceof ast.Identifier) {
+      if (
+        node instanceof ast.CallExpression &&
+        node.callee instanceof ast.Identifier
+      ) {
         targetNode = node.callee
       }
 
       // For member expressions, highlight the property
-      if (node instanceof ast.MemberExpression && node.property instanceof ast.Identifier) {
+      if (
+        node instanceof ast.MemberExpression &&
+        node.property instanceof ast.Identifier
+      ) {
         targetNode = node.property
       }
 

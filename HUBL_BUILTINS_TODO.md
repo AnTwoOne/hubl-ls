@@ -3,6 +3,7 @@
 This document lists HubL built-ins from HubSpot documentation that should be added to `/packages/server/src/hublBuiltins.ts`.
 
 Based on analysis of HubSpot's official documentation (2026-01):
+
 - https://developers.hubspot.com/docs/cms/reference/hubl/functions
 - https://developers.hubspot.com/docs/cms/reference/hubl/filters
 - https://developers.hubspot.com/docs/cms/reference/hubl/tags/standard-tags
@@ -23,6 +24,7 @@ The following 35 filters have been added to `HUBL_FILTERS`:
 **✅ Advanced Filters:** groupby, map, select, reject, selectattr, rejectattr, batch
 
 **Still TODO (lower priority):**
+
 - `min`, `max` - Min/max values
 - `xmlattr` - Format as XML attributes
 - `filesizeformat` - Format as file size
@@ -290,6 +292,7 @@ Many items appear in both Jinja2 standard library and HubL documentation. The cu
 ## Testing Recommendation
 
 After adding these built-ins:
+
 1. Run `npm run test-language` to ensure language package tests pass
 2. Run `npm run test-e2e` to ensure E2E tests pass
 3. Test completion, hover, and signature help for new items

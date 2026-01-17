@@ -70,7 +70,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "default": []
         },
         "hublLS.importPaths": {
           "title": "Import Paths",
@@ -78,7 +79,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "default": []
         },
         "hublLS.importURIs": {
           "title": "Import URIs",
@@ -86,7 +88,8 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "default": []
         },
         "hublLS.extraGlobals": {
           "title": "Extra Globals",
@@ -145,7 +148,8 @@
             },
             "additionalProperties": false,
             "required": []
-          }
+          },
+          "default": {}
         },
         "hublLS.extraTests": {
           "title": "Extra Tests",
@@ -194,7 +198,8 @@
             "required": [
               "name"
             ]
-          }
+          },
+          "default": {}
         },
         "hublLS.extraFilters": {
           "title": "Extra Filters",
@@ -243,7 +248,8 @@
             "required": [
               "name"
             ]
-          }
+          },
+          "default": {}
         }
       }
     }
