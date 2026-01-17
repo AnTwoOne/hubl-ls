@@ -13,6 +13,7 @@ import { getDocumentLinks } from "./documentLinks"
 import { getDocumentFormatting, getDocumentRangeFormatting } from "./formatting"
 import { getHover } from "./hover"
 import { processLSCommand } from "./lsCommands"
+import { getReferences } from "./references"
 import { getSemanticTokens, legend } from "./semantic"
 import { getSignatureHelp } from "./signatureHelp"
 import {
@@ -144,6 +145,7 @@ connection.onInitialize((params) => {
       },
       documentFormattingProvider: true,
       documentRangeFormattingProvider: true,
+      referencesProvider: true,
     },
   } satisfies lsp.InitializeResult
 })
@@ -298,6 +300,16 @@ connection.onDocumentFormatting(async (params) =>
 
 connection.onDocumentRangeFormatting(async (params) =>
   protectOnThrow(() => getDocumentRangeFormatting(params)),
+)
+
+connection.onReferences(async (params) =>
+  protectOnThrow(() =>
+    getReferences(
+      params.textDocument.uri,
+      params.position,
+      params.context.includeDeclaration,
+    ),
+  ),
 )
 
 registerCustomCommands(connection)
