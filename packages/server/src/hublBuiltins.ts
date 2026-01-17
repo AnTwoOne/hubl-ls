@@ -915,7 +915,7 @@ export const HUBL_PROGRAM_SYMBOLS: Record<
 }
 
 export const HUBL_FILTERS: Record<string, TypeInfo> = {
-  // HubL-specific filters beyond core Jinja filters.
+  // HubL-specific filters beyond core template filters.
   // Reference: https://developers.hubspot.com/docs/cms/reference/hubl/filters
 
   // === Existing filters ===

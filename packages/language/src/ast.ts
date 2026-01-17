@@ -129,9 +129,9 @@ export class Statement extends Node {
 
 /**
  * A permissive statement node for `{% tag ... %}` constructs that are not part of the
- * explicit HubL/Jinja statement list supported by this parser.
+ * core statement list supported by this parser.
  *
- * This is used to support HubL tags (e.g. `{% module ... %}`) without emitting
+ * This is used to support HubL-specific tags (e.g. `{% module ... %}`) without emitting
  * parser errors, while still keeping the raw token range via `openToken/identifier/closeToken`.
  */
 export class TagStatement extends Statement {
@@ -215,7 +215,7 @@ export class If extends Statement {
 
 /**
  * Loop over each item in a sequence
- * https://jinja.palletsprojects.com/en/3.0.x/templates/#for
+ * See template documentation for for-loop syntax
  */
 export class For extends Statement {
   override type = "For"
@@ -590,7 +590,7 @@ export class BinaryExpression extends Expression {
 
 /**
  * An operation with two sides, separated by the | operator.
- * Operator precedence: https://github.com/pallets/jinja/issues/379#issuecomment-168076202
+ * Filter operator precedence follows standard template engine rules.
  */
 export class FilterExpression extends Expression {
   override type = "FilterExpression"

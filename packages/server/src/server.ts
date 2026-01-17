@@ -10,6 +10,7 @@ import { readFile, registerCustomCommands } from "./customRequests"
 import { getDefinition } from "./definition"
 import { getDiagnostics } from "./diagnostics"
 import { getDocumentLinks } from "./documentLinks"
+import { getDocumentFormatting, getDocumentRangeFormatting } from "./formatting"
 import { getHover } from "./hover"
 import { processLSCommand } from "./lsCommands"
 import { getSemanticTokens, legend } from "./semantic"
@@ -141,6 +142,8 @@ connection.onInitialize((params) => {
       documentLinkProvider: {
         resolveProvider: false,
       },
+      documentFormattingProvider: true,
+      documentRangeFormattingProvider: true,
     },
   } satisfies lsp.InitializeResult
 })
@@ -287,6 +290,14 @@ connection.onCodeAction(async (params) =>
 
 connection.onDocumentLinks(async (params) =>
   protectOnThrow(() => getDocumentLinks(params.textDocument.uri)),
+)
+
+connection.onDocumentFormatting(async (params) =>
+  protectOnThrow(() => getDocumentFormatting(params)),
+)
+
+connection.onDocumentRangeFormatting(async (params) =>
+  protectOnThrow(() => getDocumentRangeFormatting(params)),
 )
 
 registerCustomCommands(connection)

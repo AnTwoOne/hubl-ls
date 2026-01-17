@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(npm run test-language:*)",
+      "Bash(npm run lint)",
+      "Bash(npx eslint packages)",
+      "Bash(npm run compile:*)"
+    ]
+  }
+}

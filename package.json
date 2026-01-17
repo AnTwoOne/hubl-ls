@@ -12,7 +12,7 @@
   },
   "displayName": "HubL Language Server",
   "description": "Language server for HubSpot CMS HubL templates.",
-  "version": "0.0.12",
+  "version": "0.1.0",
   "author": "AnTwoOne",
   "icon": "images/icon-1024.png",
   "license": "MIT",

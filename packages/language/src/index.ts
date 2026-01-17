@@ -57,6 +57,7 @@ export class Template {
 export {
   ast,
   Environment,
+  format,
   formatExpression,
   Interpreter,
   LexerError,

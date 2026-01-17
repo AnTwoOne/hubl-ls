@@ -129,9 +129,9 @@ export function parse(
       case TOKEN_TYPES.Text:
         return parseText()
       case TOKEN_TYPES.OpenStatement:
-        return parseJinjaStatement()
+        return parseHublStatement()
       case TOKEN_TYPES.OpenExpression:
-        return parseJinjaExpression()
+        return parseHublExpression()
       default:
         return createMissingNode("statement", tokens[current++].start)
     }
@@ -269,7 +269,7 @@ export function parse(
     return result
   }
 
-  function parseJinjaStatement(): Statement {
+  function parseHublStatement(): Statement {
     // Consume {% token
     const openToken = expect(TOKEN_TYPES.OpenStatement, "'{%'")
     let closeToken: TokenNode | undefined = undefined
@@ -284,8 +284,8 @@ export function parse(
     const name = tokens[current]?.value
 
     // Tags that must never be treated as "generic"/HubL tags when encountered here.
-    // If they appear in `parseJinjaStatement()`, they are unmatched control structures.
-    // Keep HubL/Jinja's strict behavior in non-safe parsing (tests rely on this).
+    // If they appear in `parseHublStatement()`, they are unmatched control structures.
+    // Keep HubL's strict behavior in non-safe parsing (tests rely on this).
     const UNMATCHED_CONTROL_TAGS = new Set([
       "elif",
       "else",
@@ -431,7 +431,7 @@ export function parse(
       }
       default:
         if (UNMATCHED_CONTROL_TAGS.has(name)) {
-          // Keep emitting a parser error for unmatched HubL/Jinja control structures.
+          // Keep emitting a parser error for unmatched HubL control structures.
           // (e.g. a stray `{% endfor %}` at top-level)
           result = createUnexpectedToken(
             `Unexpected statement '${name}'`,
@@ -443,7 +443,7 @@ export function parse(
         } else {
           // Permissive fallback: treat unknown tags as a generic statement.
           // This is required for HubL tags (e.g. `{% module %}` / `{% dnd_area %}`)
-          // which are not part of core HubL/Jinja syntax.
+          // which are not part of core Jinja syntax but are HubL-specific.
           ++current // consume the tag name identifier
           const args = parseTagArgumentsUntilCloseStatement()
           closeToken = expect(TOKEN_TYPES.CloseStatement, "'%}'")
@@ -460,7 +460,7 @@ export function parse(
     return result
   }
 
-  function parseJinjaExpression(): Statement {
+  function parseHublExpression(): Statement {
     // Consume {{ }} tokens
     const openToken = expect(TOKEN_TYPES.OpenExpression, "'{{'")
 

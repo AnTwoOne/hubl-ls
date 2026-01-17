@@ -522,7 +522,7 @@ export class Environment {
 
   /**
    * Set variable in the current scope.
-   * See https://jinja.palletsprojects.com/en/3.0.x/templates/#assignments for more information (HubL is based on Jinja).
+   * See Jinja docs for template assignment syntax (HubL is based on Jinja template syntax).
    */
   setVariable(name: string, value: AnyRuntimeValue): AnyRuntimeValue {
     this.variables.set(name, value)
@@ -567,9 +567,9 @@ export function setupGlobals(env: Environment): void {
   env.set("range", range)
   env.set("strftime_now", strftime_now)
 
-  // NOTE: According to the Jinja docs: The special constants true, false, and none are indeed lowercase.
+  // NOTE: The special constants true, false, and none are lowercase in Jinja/HubL.
   // Because that caused confusion in the past, (True used to expand to an undefined variable that was considered false),
-  // all three can now also be written in title case (True, False, and None). However, for consistency, (all Jinja identifiers are lowercase)
+  // all three can now also be written in title case (True, False, and None). However, for consistency,
   // you should use the lowercase versions.
   env.set("True", true)
   env.set("False", false)
@@ -781,7 +781,7 @@ export class Interpreter {
     //   }
     //   return filter.value([operand], environment);
 
-    // https://jinja.palletsprojects.com/en/3.0.x/templates/#list-of-builtin-filters
+    // See Jinja/HubL filter documentation for list of builtin filters
 
     if (filterNode.type === "Identifier") {
       const filter = filterNode as Identifier
@@ -1091,8 +1091,8 @@ export class Interpreter {
       } else if (operand instanceof StringValue) {
         switch (filterName) {
           case "indent": {
-            // https://jinja.palletsprojects.com/en/3.1.x/templates/#jinja-filters.indent
-            // Return a copy of the string with each line indented by 4 spaces. The first line and blank lines are not indented by default.
+            // indent filter: Return a copy of the string with each line indented by 4 spaces.
+            // The first line and blank lines are not indented by default.
             // Parameters:
             //  - width: Number of spaces, or a string, to indent by.
             //  - first: Don't skip indenting the first line.
@@ -1166,7 +1166,7 @@ export class Interpreter {
     environment: Environment,
   ): BooleanValue {
     // For now, we only support the built-in tests
-    // https://jinja.palletsprojects.com/en/3.0.x/templates/#list-of-builtin-tests
+    // See Jinja/HubL documentation for list of builtin tests
     //
     // TODO: Add support for non-identifier tests. e.g., divisibleby(number)
     const operand = this.evaluate(node.operand, environment)
@@ -1231,7 +1231,7 @@ export class Interpreter {
     statements: Statement[],
     environment: Environment,
   ): StringValue {
-    // HubL/Jinja templates always evaluate to a String,
+    // HubL templates always evaluate to a String,
     // so we accumulate the result of each statement into a final string
 
     let result = ""
@@ -1568,7 +1568,7 @@ export class Interpreter {
   }
 
   /**
-   * See https://jinja.palletsprojects.com/en/3.1.x/templates/#macros for more information.
+   * Evaluate a macro definition. See Jinja/HubL macro documentation for more information.
    */
   private evaluateMacro(node: Macro, environment: Environment): NullValue {
     environment.setVariable(

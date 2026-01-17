@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2025-12-27
+## [0.1.0] - 2026-01-17
 
 ### Breaking Changes
 
@@ -29,11 +29,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LSP request types renamed from `jinja/*` to `hubl/*`
 - Environment variable renamed from `JINJA_LS_LOG_FILE` to `HUBL_LS_LOG_FILE`
 - Error messages now reference "HubL LS" instead of "Jinja LS"
-- Code comments updated to reference "HubL/Jinja" where appropriate
+- Code comments updated to reference "HubL" instead of "Jinja" throughout the codebase
+- Parser function names changed from `parseJinjaStatement/Expression` to `parseHublStatement/Expression`
+- Exported `format` function from language package for programmatic use
 
 ### Added
 
+- Document formatting support (Format Document and Format Selection commands)
 - Added `.hubl` file extension support for path completions
+- Created comprehensive documentation for missing HubL built-ins (HUBL_BUILTINS_TODO.md)
 
 ## [0.0.12] - 2025-11-02
 
