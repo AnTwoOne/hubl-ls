@@ -1,11 +1,74 @@
 import { ast } from "@hubl-ls/language"
 import * as lsp from "vscode-languageserver"
+import { MarkupKind } from "vscode-languageserver"
 import { HOVER_LITERAL_MAX_LENGTH } from "./constants"
 import { HUBL_PROGRAM_SYMBOLS, HUBL_TAG_TYPES } from "./hublBuiltins"
 import { documentASTs, documents } from "./state"
-import { findSymbol } from "./symbols"
+import { findSymbol, resolveTypeReference } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
 import { parentOfType, tokenAt } from "./utilities"
+
+/**
+ * Create a MarkupContent hover with proper markdown rendering.
+ */
+const createMarkdownHover = (
+  signature: string,
+  documentation?: string,
+): lsp.Hover => {
+  const parts: string[] = []
+  parts.push("```python\n" + signature + "\n```")
+  if (documentation) {
+    parts.push(documentation)
+  }
+  return {
+    contents: {
+      kind: MarkupKind.Markdown,
+      value: parts.join("\n\n"),
+    },
+  }
+}
+
+/**
+ * Check if position is inside a comment and extract the word at that position.
+ */
+const getWordInComment = (
+  document: lsp.TextDocument,
+  tokens: ast.TokenNode[],
+  offset: number,
+): { word: string; token: ast.TokenNode } | undefined => {
+  // Find comment token containing this offset
+  for (const token of tokens) {
+    if (
+      token.type === "Comment" &&
+      token.start <= offset &&
+      token.end >= offset
+    ) {
+      const text = document.getText()
+      const commentText = text.slice(token.start, token.end)
+      const relativeOffset = offset - token.start
+
+      // Find word boundaries around the cursor
+      let start = relativeOffset
+      let end = relativeOffset
+
+      while (start > 0 && /[A-Za-z0-9_]/.test(commentText[start - 1])) {
+        start--
+      }
+      while (
+        end < commentText.length &&
+        /[A-Za-z0-9_]/.test(commentText[end])
+      ) {
+        end++
+      }
+
+      if (start < end) {
+        const word = commentText.slice(start, end)
+        return { word, token }
+      }
+    }
+  }
+  return undefined
+}
 
 export const getHover = async (uri: string, position: lsp.Position) => {
   const document = documents.get(uri)
@@ -16,6 +79,59 @@ export const getHover = async (uri: string, position: lsp.Position) => {
   }
 
   const offset = document.offsetAt(position)
+
+  // Check if we're hovering over a type reference in a comment
+  const commentWord = getWordInComment(document, tokens, offset)
+  if (commentWord) {
+    const { word } = commentWord
+    // Try to resolve as a typedef
+    const typeInfo = resolveTypeReference(word, uri)
+    if (typeInfo) {
+      const parts: string[] = []
+      parts.push(`### ${word}`)
+      if (typeInfo.documentation) {
+        parts.push(typeInfo.documentation)
+      }
+      if (typeInfo.properties) {
+        const propLines = Object.entries(typeInfo.properties)
+          .filter(
+            ([, v]) =>
+              typeof v !== "object" ||
+              !("signature" in v && v.signature !== undefined),
+          )
+          .map(([name, value]) => {
+            let type = "Any"
+            let desc = ""
+            if (typeof value === "string") {
+              type = value
+            } else if (value && typeof value === "object") {
+              if ("type" in value && typeof value.type === "string") {
+                type = value.type
+              } else if ("name" in value && typeof value.name === "string") {
+                type = value.name
+              }
+              if (
+                "documentation" in value &&
+                typeof value.documentation === "string"
+              ) {
+                desc = ` \u2014 ${value.documentation}`
+              }
+            }
+            return `- \`${name}\` \`${type}\`${desc}`
+          })
+        if (propLines.length > 0) {
+          parts.push("**Properties**\n" + propLines.join("\n"))
+        }
+      }
+      return {
+        contents: {
+          kind: MarkupKind.Markdown,
+          value: parts.join("\n\n"),
+        },
+      } satisfies lsp.Hover
+    }
+  }
+
   const token = tokenAt(tokens, offset)
   if (!token) {
     return
@@ -36,16 +152,10 @@ export const getHover = async (uri: string, position: lsp.Position) => {
       token.getPreviousSibling()?.type === "OpenStatement"
 
     if (looksLikeTagName && tag?.signature) {
-      const contents: lsp.MarkedString[] = [
-        {
-          language: "python",
-          value: `${token.value}${stringifySignatureInfo(tag.signature)}`,
-        },
-      ]
-      if (tag.signature.documentation) {
-        contents.push(tag.signature.documentation)
-      }
-      return { contents } satisfies lsp.Hover
+      return createMarkdownHover(
+        `${token.value}${stringifySignatureInfo(tag.signature)}`,
+        tag.signature.documentation,
+      )
     }
   }
 
@@ -61,18 +171,10 @@ export const getHover = async (uri: string, position: lsp.Position) => {
     const callee = callExpression.callee
     const resolvedType = resolveType(getType(callee, document))
     if (resolvedType?.signature !== undefined) {
-      const contents: lsp.MarkedString[] = [
-        {
-          language: "python",
-          value: stringifySignatureInfo(resolvedType.signature),
-        },
-      ]
-      if (resolvedType.signature.documentation) {
-        contents.push(resolvedType.signature.documentation)
-      }
-      return {
-        contents,
-      } satisfies lsp.Hover
+      return createMarkdownHover(
+        stringifySignatureInfo(resolvedType.signature),
+        resolvedType.signature.documentation,
+      )
     }
 
     // Fallback: if type inference didn't resolve a signature, still provide hover
@@ -84,16 +186,10 @@ export const getHover = async (uri: string, position: lsp.Position) => {
       "signature" in builtin &&
       builtin.signature
     ) {
-      const contents: lsp.MarkedString[] = [
-        {
-          language: "python",
-          value: stringifySignatureInfo(builtin.signature),
-        },
-      ]
-      if (builtin.signature.documentation) {
-        contents.push(builtin.signature.documentation)
-      }
-      return { contents } satisfies lsp.Hover
+      return createMarkdownHover(
+        stringifySignatureInfo(builtin.signature),
+        builtin.signature.documentation,
+      )
     }
 
     const [symbol, symbolDocument] = findSymbol(
@@ -108,23 +204,25 @@ export const getHover = async (uri: string, position: lsp.Position) => {
       symbol.node.openToken !== undefined &&
       symbol.node.closeToken !== undefined
     ) {
-      const contents: lsp.MarkedString[] = [
-        {
-          language: "hubl",
-          value: symbolDocument.getText(
-            lsp.Range.create(
-              symbolDocument.positionAt(symbol.node.openToken.start),
-              symbolDocument.positionAt(symbol.node.closeToken.end),
-            ),
-          ),
-        },
-      ]
+      const macroSource = symbolDocument.getText(
+        lsp.Range.create(
+          symbolDocument.positionAt(symbol.node.openToken.start),
+          symbolDocument.positionAt(symbol.node.closeToken.end),
+        ),
+      )
       // Get the macro's type info which includes formatted documentation
       const macroType = resolveType(getType(token.parent, document))
+      const parts: string[] = []
+      parts.push("```hubl\n" + macroSource + "\n```")
       if (macroType?.signature?.documentation) {
-        contents.push(macroType.signature.documentation)
+        parts.push(macroType.signature.documentation)
       }
-      return { contents } satisfies lsp.Hover
+      return {
+        contents: {
+          kind: MarkupKind.Markdown,
+          value: parts.join("\n\n"),
+        },
+      } satisfies lsp.Hover
     }
   }
 
@@ -155,14 +253,11 @@ export const getHover = async (uri: string, position: lsp.Position) => {
           blockDocument.positionAt(sourceBlock.closeToken.end),
         ),
       )
-
       return {
-        contents: [
-          {
-            language: "hubl",
-            value: sourceText,
-          },
-        ],
+        contents: {
+          kind: MarkupKind.Markdown,
+          value: "```hubl\n" + sourceText + "\n```",
+        },
       } satisfies lsp.Hover
     }
   }
@@ -191,20 +286,10 @@ export const getHover = async (uri: string, position: lsp.Position) => {
           value += ` = ${nodeType.literalValue.length < HOVER_LITERAL_MAX_LENGTH ? nodeType.literalValue : "..."}`
         }
       }
-      const contents: lsp.MarkedString[] = [
-        {
-          language: "python",
-          value,
-        },
-      ]
-      if (nodeType.documentation ?? resolvedType?.signature?.documentation) {
-        contents.push(
-          nodeType.documentation ?? resolvedType?.signature?.documentation,
-        )
-      }
-      return {
-        contents,
-      } satisfies lsp.Hover
+      return createMarkdownHover(
+        value,
+        nodeType.documentation ?? resolvedType?.signature?.documentation,
+      )
     }
   }
 }

@@ -30,6 +30,15 @@ export const documentSymbols = new Map<string, Map<string, SymbolInfo[]>>()
  * Key is the typedef name (e.g., "AvatarData"), value is the TypeInfo.
  */
 export const documentTypedefs = new Map<string, Map<string, TypeInfo>>()
+
+/**
+ * Stores @typedef definition locations per document for go-to-definition.
+ * Key is the typedef name, value is the Comment node where it's defined.
+ */
+export const documentTypedefLocations = new Map<
+  string,
+  Map<string, ast.Comment>
+>()
 export const globals: Record<string, unknown> = {}
 export const documentGlobals: Record<string, Record<string, unknown>> = {}
 export const configuration: {

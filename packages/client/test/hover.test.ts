@@ -9,45 +9,35 @@ suite("Should provide hover", () => {
 
   test("Returns hover information for HubL tags + functions", async () => {
     // Hover tag name: `{% module ... %}`
-    expect(await getHover(hublUri, new vscode.Position(0, 5))).toMatchObject({
-      contents: expect.arrayContaining([
-        "```python\nmodule(path: str, label: str, no_wrapper: bool) -> None\n```",
-      ]),
-    })
+    const moduleHover = await getHover(hublUri, new vscode.Position(0, 5))
+    expect(moduleHover.content).toContain(
+      "module(path: str, label: str, no_wrapper: bool) -> None",
+    )
 
     // Hover function: `resize_image_url(...)`
-    expect(await getHover(hublUri, new vscode.Position(4, 6))).toMatchObject({
-      contents: expect.arrayContaining([
-        "```python\n(src: str, width: int, height: int) -> str\n```",
-      ]),
-    })
+    const resizeHover = await getHover(hublUri, new vscode.Position(4, 6))
+    expect(resizeHover.content).toContain(
+      "(src: str, width: int, height: int) -> str",
+    )
   })
 
   test("Formats JSDoc-like macro documentation", async () => {
     // Hover macro call: `SectionWrapper(...)`
     const hover = await getHover(macroDocsUri, new vscode.Position(12, 5))
 
-    // Signature should still be shown.
-    expect(hover.contents).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("SectionWrapper"),
-        expect.stringContaining("**Parameters**"),
-        expect.stringContaining("**Properties**"),
-        expect.stringContaining("`data.section_id`"),
-      ]),
-    )
+    // Content should include signature and documentation
+    expect(hover.content).toContain("SectionWrapper")
+    expect(hover.content).toContain("**Parameters**")
+    expect(hover.content).toContain("**Properties**")
+    expect(hover.content).toContain("`data.section_id`")
   })
 
   test("Shows @example in hover documentation", async () => {
     // Hover macro `Avatar` which has @example
     const hover = await getHover(typedefUri, new vscode.Position(13, 12))
 
-    expect(hover.contents).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining("**Example**"),
-        expect.stringContaining("Avatar"),
-      ]),
-    )
+    expect(hover.content).toContain("**Example**")
+    expect(hover.content).toContain("Avatar")
   })
 
   test("Shows @deprecated warning in hover", async () => {
@@ -55,22 +45,28 @@ suite("Should provide hover", () => {
     const hover = await getHover(typedefUri, new vscode.Position(26, 5))
 
     // The deprecation warning is included in the documentation string
-    const hasDeprecated = hover.contents.some((c) =>
-      c.toLowerCase().includes("deprecated"),
-    )
-    const hasNewMacro = hover.contents.some((c) => c.includes("NewMacro"))
-    expect(hasDeprecated).toBe(true)
-    expect(hasNewMacro).toBe(true)
+    expect(hover.content.toLowerCase()).toContain("deprecated")
+    expect(hover.content).toContain("NewMacro")
   })
 })
 
-const hoverToContents = (h: vscode.Hover) => {
-  return h.contents.map((c) => {
-    if (typeof c === "string") {
-      return c.trim()
-    }
-    return c.value.trim()
-  })
+const hoverToContent = (h: vscode.Hover): string => {
+  // Handle both array of MarkedString and single MarkupContent
+  if (Array.isArray(h.contents)) {
+    return h.contents
+      .map((c) => {
+        if (typeof c === "string") {
+          return c.trim()
+        }
+        return c.value.trim()
+      })
+      .join("\n\n")
+  }
+  // Single MarkupContent
+  if (typeof h.contents === "string") {
+    return h.contents.trim()
+  }
+  return h.contents.value.trim()
 }
 
 export const getHover = async (uri: vscode.Uri, position: vscode.Position) => {
@@ -83,7 +79,7 @@ export const getHover = async (uri: vscode.Uri, position: vscode.Position) => {
   expect(hovers.length).toBeGreaterThan(0)
   const hover = hovers[0]
   return {
-    contents: hoverToContents(hover),
+    content: hoverToContent(hover),
     range: rangeToJson(hover.range),
   }
 }

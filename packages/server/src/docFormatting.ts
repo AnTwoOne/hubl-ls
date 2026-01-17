@@ -92,11 +92,12 @@ const formatPropertyLine = (
   depth: number,
   expandedTypes: Set<string>,
 ): string => {
-  const indentStr = "  ".repeat(indent)
-  const left = mdInlineCode(name)
-  const typeStr = type ? `: ${mdInlineCode(type)}` : ""
-  const desc = description ? ` — ${description}` : ""
-  let line = `${indentStr}- ${left}${typeStr}${desc}`
+  const indentStr = "    ".repeat(indent)
+  const bullet = indent === 0 ? "- " : "- "
+  const left = `**${name}**`
+  const typeStr = type ? `: \`${type}\`` : ""
+  const desc = description ? ` — *${description}*` : ""
+  let line = `${indentStr}${bullet}${left}${typeStr}${desc}`
 
   // Check if type is a typedef reference that should be expanded
   if (
@@ -169,50 +170,47 @@ export const formatJSDocLikeMarkdown = (
   const seeTag = tags.find((t) => t.tag === "see")
   const sinceTag = tags.find((t) => t.tag === "since")
 
-  const lines: string[] = []
+  const sections: string[] = []
 
-  // Deprecated warning at the top
+  // Deprecated warning at the top - highly visible
   if (deprecatedTag) {
-    // Combine name and description for full message (e.g., "Use NewMacro instead")
     const reasonParts = [deprecatedTag.name, deprecatedTag.description].filter(
       Boolean,
     )
     const reason = reasonParts.join(" ")
-    lines.push(`⚠️ **Deprecated**${reason ? `: ${reason}` : ""}`)
+    sections.push(`> ⚠️ **Deprecated**${reason ? `: ${reason}` : ""}`)
   }
 
+  // Name/title section with type badge
   if (nameTag?.name) {
-    const parts: string[] = ["**" + nameTag.name + "**"]
+    let title = `### ${nameTag.name}`
     if (nameTag.type) {
-      parts.push(mdInlineCode(nameTag.type))
+      title += ` • ${mdInlineCode(nameTag.type)}`
     }
+    sections.push(title)
     if (nameTag.description) {
-      parts.push("— " + nameTag.description)
+      sections.push(nameTag.description)
     }
-    lines.push(parts.join(" "))
   }
 
+  // Description
   if (descriptionTag?.description) {
-    lines.push(descriptionTag.description)
+    sections.push(descriptionTag.description)
   }
 
+  // Parameters section with table-like formatting
   if (params.length) {
-    lines.push(
-      [
-        "**Parameters**",
-        params
-          .filter((p) => p.name)
-          .map((p) => {
-            const left = mdInlineCode(p.name!)
-            const type = p.type ? `: ${mdInlineCode(p.type)}` : ""
-            const desc = p.description ? ` — ${p.description}` : ""
-            return `- ${left}${type}${desc}`
-          })
-          .join("\n"),
-      ].join("\n"),
-    )
+    const paramLines = params
+      .filter((p) => p.name)
+      .map((p) => {
+        const typeStr = p.type ? `: \`${p.type}\`` : ""
+        const desc = p.description ? ` — *${p.description}*` : ""
+        return `- **${p.name!}**${typeStr}${desc}`
+      })
+    sections.push(["**Parameters**", ...paramLines].join("\n"))
   }
 
+  // Properties section with nested expansion
   if (props.length) {
     const propLines = props
       .filter((p) => p.name)
@@ -227,39 +225,40 @@ export const formatJSDocLikeMarkdown = (
           new Set(),
         ),
       )
-    lines.push(["**Properties**", ...propLines].join("\n"))
+    sections.push(["**Properties**", ...propLines].join("\n"))
   }
 
+  // Examples with syntax-highlighted code blocks
   if (examples.length) {
-    lines.push(
-      [
-        "**Example**",
-        examples
-          .map((e) => {
-            const code = e.name || e.description || ""
-            return "```hubl\n" + code + "\n```"
-          })
-          .join("\n"),
-      ].join("\n"),
-    )
+    const exampleBlocks = examples
+      .map((e) => {
+        const code = e.name || e.description || ""
+        return "```hubl\n" + code + "\n```"
+      })
+      .join("\n")
+    sections.push(`**Example**\n${exampleBlocks}`)
   }
 
+  // Footer metadata
+  const footerParts: string[] = []
   if (seeTag) {
     const ref = seeTag.name || seeTag.description || ""
     if (ref) {
-      lines.push(`**See also:** ${mdInlineCode(ref)}`)
+      footerParts.push(`🔗 See: ${mdInlineCode(ref)}`)
     }
   }
-
   if (sinceTag) {
     const version = sinceTag.name || sinceTag.description || ""
     if (version) {
-      lines.push(`*Since ${version}*`)
+      footerParts.push(`📌 Since ${version}`)
     }
+  }
+  if (footerParts.length > 0) {
+    sections.push(`---\n*${footerParts.join("  •  ")}*`)
   }
 
   // Fallback: if we didn't render anything (malformed tags), keep raw.
-  return lines.filter(Boolean).join("\n\n") || raw
+  return sections.filter(Boolean).join("\n\n") || raw
 }
 
 /**

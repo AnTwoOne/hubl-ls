@@ -1,0 +1,126 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "HubL JSDoc",
+  "scopeName": "comment.block.documentation.hubl",
+  "injectionSelector": "L:comment.block.hubl",
+  "patterns": [
+    {
+      "include": "#jsdoc-tags"
+    }
+  ],
+  "repository": {
+    "jsdoc-tags": {
+      "patterns": [
+        {
+          "comment": "@typedef tag with type and name",
+          "match": "(@typedef)\\s*(?:(\\{)([^}]*)(\\}))?\\s*([A-Za-z_][A-Za-z0-9_]*)?",
+          "captures": {
+            "1": { "name": "storage.type.class.jsdoc.hubl" },
+            "2": {
+              "name": "punctuation.definition.bracket.curly.begin.jsdoc.hubl"
+            },
+            "3": { "name": "entity.name.type.instance.jsdoc.hubl" },
+            "4": {
+              "name": "punctuation.definition.bracket.curly.end.jsdoc.hubl"
+            },
+            "5": { "name": "entity.name.type.class.jsdoc.hubl" }
+          }
+        },
+        {
+          "comment": "@param and @property tags with type, name, and description",
+          "match": "(@(?:param|property|prop|arg|argument))\\s*(?:(\\{)([^}]*)(\\}))?\\s*([A-Za-z_][A-Za-z0-9_.]*)?(?:\\s*[-:]\\s*(.*))?",
+          "captures": {
+            "1": { "name": "storage.type.class.jsdoc.hubl" },
+            "2": {
+              "name": "punctuation.definition.bracket.curly.begin.jsdoc.hubl"
+            },
+            "3": { "name": "entity.name.type.instance.jsdoc.hubl" },
+            "4": {
+              "name": "punctuation.definition.bracket.curly.end.jsdoc.hubl"
+            },
+            "5": { "name": "variable.other.jsdoc.hubl" },
+            "6": {
+              "name": "comment.block.documentation.description.jsdoc.hubl"
+            }
+          }
+        },
+        {
+          "comment": "@name tag",
+          "match": "(@name)\\s*([A-Za-z_][A-Za-z0-9_]*)?",
+          "captures": {
+            "1": { "name": "storage.type.class.jsdoc.hubl" },
+            "2": { "name": "entity.name.function.jsdoc.hubl" }
+          }
+        },
+        {
+          "comment": "@deprecated tag with reason",
+          "match": "(@deprecated)(?:\\s+(.*))?",
+          "captures": {
+            "1": { "name": "invalid.deprecated.jsdoc.hubl" },
+            "2": {
+              "name": "comment.block.documentation.description.jsdoc.hubl"
+            }
+          }
+        },
+        {
+          "comment": "@example tag",
+          "match": "(@example)(?:\\s+(.*))?",
+          "captures": {
+            "1": { "name": "storage.type.class.jsdoc.hubl" },
+            "2": { "name": "markup.raw.code.jsdoc.hubl" }
+          }
+        },
+        {
+          "comment": "@returns/@return tag",
+          "match": "(@returns?)\\s*(?:(\\{)([^}]*)(\\}))?(?:\\s+(.*))?",
+          "captures": {
+            "1": { "name": "storage.type.class.jsdoc.hubl" },
+            "2": {
+              "name": "punctuation.definition.bracket.curly.begin.jsdoc.hubl"
+            },
+            "3": { "name": "entity.name.type.instance.jsdoc.hubl" },
+            "4": {
+              "name": "punctuation.definition.bracket.curly.end.jsdoc.hubl"
+            },
+            "5": {
+              "name": "comment.block.documentation.description.jsdoc.hubl"
+            }
+          }
+        },
+        {
+          "comment": "@see tag",
+          "match": "(@see)\\s*(.*)?",
+          "captures": {
+            "1": { "name": "storage.type.class.jsdoc.hubl" },
+            "2": { "name": "markup.underline.link.jsdoc.hubl" }
+          }
+        },
+        {
+          "comment": "@since tag",
+          "match": "(@since)\\s*([0-9][A-Za-z0-9._-]*)?",
+          "captures": {
+            "1": { "name": "storage.type.class.jsdoc.hubl" },
+            "2": { "name": "constant.numeric.version.jsdoc.hubl" }
+          }
+        },
+        {
+          "comment": "@description tag",
+          "match": "(@description)(?:\\s+(.*))?",
+          "captures": {
+            "1": { "name": "storage.type.class.jsdoc.hubl" },
+            "2": {
+              "name": "comment.block.documentation.description.jsdoc.hubl"
+            }
+          }
+        },
+        {
+          "comment": "Generic @ tags",
+          "match": "(@[A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "storage.type.class.jsdoc.hubl" }
+          }
+        }
+      ]
+    }
+  }
+}

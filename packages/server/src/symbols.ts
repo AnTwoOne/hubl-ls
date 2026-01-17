@@ -15,6 +15,7 @@ import {
   documentImports,
   documents,
   documentSymbols,
+  documentTypedefLocations,
   documentTypedefs,
   getFilters,
   getTests,
@@ -186,6 +187,32 @@ export const resolveTypeReference = (
           }
         }
       }
+    }
+  }
+
+  return undefined
+}
+
+/**
+ * Find the location (Comment node) where a typedef is defined.
+ */
+export const findTypedefLocation = (
+  typeName: string,
+  documentUri: string,
+): { uri: string; comment: ast.Comment } | undefined => {
+  // Check current document
+  const locations = documentTypedefLocations.get(documentUri)
+  if (locations?.has(typeName)) {
+    return { uri: documentUri, comment: locations.get(typeName)! }
+  }
+
+  // Check imported documents
+  const imports = documentImports.get(documentUri)
+  for (const [, importedUri] of imports ?? []) {
+    if (!importedUri) continue
+    const importedLocations = documentTypedefLocations.get(importedUri)
+    if (importedLocations?.has(typeName)) {
+      return { uri: importedUri, comment: importedLocations.get(typeName)! }
     }
   }
 
@@ -395,6 +422,7 @@ export const collectSymbols = (
   imports: (ast.Include | ast.Import | ast.FromImport | ast.Extends)[],
   lsCommands: string[],
   typedefs: Map<string, TypeInfo>,
+  typedefLocations: Map<string, ast.Comment>,
 ) => {
   const addSymbol = (name: string, value: SymbolInfo) => {
     const values = result.get(name) ?? []
@@ -658,6 +686,7 @@ export const collectSymbols = (
     if (typedef) {
       const typeInfo = typedefToTypeInfo(typedef)
       typedefs.set(typedef.name, typeInfo)
+      typedefLocations.set(typedef.name, statement)
     }
   }
 }

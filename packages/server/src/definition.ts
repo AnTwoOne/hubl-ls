@@ -6,8 +6,57 @@ import {
   documents,
   documentSymbols,
 } from "./state"
-import { findSymbol, findSymbolInDocument } from "./symbols"
+import {
+  findSymbol,
+  findSymbolInDocument,
+  findTypedefLocation,
+  resolveTypeReference,
+} from "./symbols"
 import { parentOfType, tokenAt } from "./utilities"
+
+/**
+ * Check if position is inside a comment and extract the word at that position.
+ */
+const getWordInComment = (
+  document: lsp.TextDocument,
+  tokens: ast.TokenNode[],
+  offset: number,
+): { word: string; start: number; end: number } | undefined => {
+  for (const token of tokens) {
+    if (
+      token.type === "Comment" &&
+      token.start <= offset &&
+      token.end >= offset
+    ) {
+      const text = document.getText()
+      const commentText = text.slice(token.start, token.end)
+      const relativeOffset = offset - token.start
+
+      let start = relativeOffset
+      let end = relativeOffset
+
+      while (start > 0 && /[A-Za-z0-9_]/.test(commentText[start - 1])) {
+        start--
+      }
+      while (
+        end < commentText.length &&
+        /[A-Za-z0-9_]/.test(commentText[end])
+      ) {
+        end++
+      }
+
+      if (start < end) {
+        const word = commentText.slice(start, end)
+        return {
+          word,
+          start: token.start + start,
+          end: token.start + end,
+        }
+      }
+    }
+  }
+  return undefined
+}
 
 export const getDefinition = async (uri: string, position: lsp.Position) => {
   const document = documents.get(uri)
@@ -19,6 +68,38 @@ export const getDefinition = async (uri: string, position: lsp.Position) => {
   }
 
   const offset = document.offsetAt(position)
+
+  // Check if we're in a comment - handle typedef references
+  const commentWord = getWordInComment(document, tokens, offset)
+  if (commentWord) {
+    const { word } = commentWord
+    // Try to find typedef definition
+    const typeInfo = resolveTypeReference(word, uri)
+    if (typeInfo) {
+      const location = findTypedefLocation(word, uri)
+      if (location) {
+        const targetDoc = documents.get(location.uri)
+        const commentStart = location.comment.getStart()
+        const commentEnd = location.comment.getEnd()
+        if (
+          targetDoc &&
+          commentStart !== undefined &&
+          commentEnd !== undefined
+        ) {
+          return [
+            lsp.Location.create(
+              location.uri,
+              lsp.Range.create(
+                targetDoc.positionAt(commentStart),
+                targetDoc.positionAt(commentEnd),
+              ),
+            ),
+          ]
+        }
+      }
+    }
+  }
+
   const token = tokenAt(tokens, offset)
   if (!token) {
     return

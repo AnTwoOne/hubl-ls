@@ -51,6 +51,17 @@
     "Programming Languages"
   ],
   "contributes": {
+    "grammars": [
+      {
+        "scopeName": "comment.block.documentation.hubl",
+        "path": "./syntaxes/hubl-jsdoc.tmLanguage.json",
+        "injectTo": [
+          "source.hubl",
+          "text.html.hubl",
+          "text.css.hubl"
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "hublLS.restart",
