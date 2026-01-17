@@ -1017,6 +1017,14 @@ export const BUILTIN_TESTS: Record<string, TypeInfo> = {
       return: "bool",
     },
   },
+  gte: {
+    name: "gte",
+    signature: {
+      documentation: "Same as a >= b.",
+      arguments: [{ name: "b" }],
+      return: "bool",
+    },
+  },
   ">=": {
     name: ">=",
     signature: {
@@ -1059,6 +1067,14 @@ export const BUILTIN_TESTS: Record<string, TypeInfo> = {
   },
   le: {
     name: "le",
+    signature: {
+      documentation: "Same as a <= b.",
+      arguments: [{ name: "b" }],
+      return: "bool",
+    },
+  },
+  lte: {
+    name: "lte",
     signature: {
       documentation: "Same as a <= b.",
       arguments: [{ name: "b" }],
