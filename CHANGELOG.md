@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Find All References support - Navigate to all usages of a symbol (variable, macro, block) across all files in the workspace
 - HubL-specific expression tests: `string_containing`, `string_startingwith`, `truthy`, `containing`, `containingall`, `within`
 - HubL standard includes functions: `standard_header_includes`, `standard_footer_includes`
+- HubL date/time filters: `format_currency_value`, `minus_time`, `plus_time`, `strtodate`
+- HubL numeric filters: `add`, `multiply`
 
 ### Fixed
 

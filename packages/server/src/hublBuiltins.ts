@@ -1773,4 +1773,71 @@ export const HUBL_FILTERS: Record<string, TypeInfo> = {
       return: "list",
     },
   },
+
+  // Date/Time Filters
+  format_currency_value: {
+    name: "format_currency_value",
+    signature: {
+      documentation:
+        "Formats a number as currency per locale. Supports locale codes (e.g. 'en-US'), currency codes (e.g. 'USD'), and decimal digit control.",
+      arguments: [
+        { name: "locale", type: "str" },
+        { name: "currency", type: "str" },
+        { name: "minDecimalDigits", type: "int", default: "2" },
+        { name: "maxDecimalDigits", type: "int", default: "2" },
+      ],
+      return: "str",
+    },
+  },
+  minus_time: {
+    name: "minus_time",
+    signature: {
+      documentation:
+        "Subtracts time from a datetime object. Time unit can be 'years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds'.",
+      arguments: [
+        { name: "diff", type: "int" },
+        { name: "timeunit", type: "str" },
+      ],
+      return: "datetime",
+    },
+  },
+  plus_time: {
+    name: "plus_time",
+    signature: {
+      documentation:
+        "Adds time to a datetime object. Time unit can be 'years', 'months', 'weeks', 'days', 'hours', 'minutes', 'seconds', 'milliseconds'.",
+      arguments: [
+        { name: "diff", type: "int" },
+        { name: "timeunit", type: "str" },
+      ],
+      return: "datetime",
+    },
+  },
+  strtodate: {
+    name: "strtodate",
+    signature: {
+      documentation:
+        "Parses a string to a date object using a format string. Uses Java SimpleDateFormat patterns.",
+      arguments: [{ name: "format", type: "str" }],
+      return: "datetime",
+    },
+  },
+
+  // Numeric Filters
+  add: {
+    name: "add",
+    signature: {
+      documentation: "Adds a number to the value.",
+      arguments: [{ name: "number", type: "int" }],
+      return: "int",
+    },
+  },
+  multiply: {
+    name: "multiply",
+    signature: {
+      documentation: "Multiplies the value by a number.",
+      arguments: [{ name: "multiplier", type: "int" }],
+      return: "int",
+    },
+  },
 }
