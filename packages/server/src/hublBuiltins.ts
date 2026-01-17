@@ -687,6 +687,70 @@ export const HUBL_PROGRAM_SYMBOLS: Record<
       return: "str",
     },
   },
+  blog_authors: {
+    name: "function",
+    signature: {
+      documentation:
+        "Returns a sequence of blog author objects for the specified blog.",
+      arguments: [
+        { name: "selected_blog", type: "str" },
+        { name: "limit", type: "int", default: "250" },
+      ],
+      return: { name: "list", elementType: "dict" },
+    },
+  },
+  blog_by_id: {
+    name: "function",
+    signature: {
+      documentation: "Returns a blog object by ID.",
+      arguments: [{ name: "blog_id", type: "int" }],
+      return: "dict",
+    },
+  },
+  blog_page_link: {
+    name: "function",
+    signature: {
+      documentation:
+        "Creates pagination links for blog listing templates. Returns URL for the specified page number.",
+      arguments: [{ name: "page", type: "int" }],
+      return: "str",
+    },
+  },
+  blog_post_archive_url: {
+    name: "function",
+    signature: {
+      documentation:
+        "Returns the URL to the archive listing page for the given date values.",
+      arguments: [
+        { name: "selected_blog", type: "str" },
+        { name: "year", type: "int" },
+        { name: "month", type: "int", default: "undefined" },
+        { name: "day", type: "int", default: "undefined" },
+      ],
+      return: "str",
+    },
+  },
+  blog_tags: {
+    name: "function",
+    signature: {
+      documentation:
+        "Returns a sequence of the 250 most blogged-about tags for the specified blog.",
+      arguments: [
+        { name: "selected_blog", type: "str" },
+        { name: "limit", type: "int", default: "250" },
+      ],
+      return: { name: "list", elementType: "dict" },
+    },
+  },
+  blog_total_post_count: {
+    name: "function",
+    signature: {
+      documentation:
+        "Returns the total number of published posts in the specified blog.",
+      arguments: [{ name: "selected_blog", type: "str", default: "undefined" }],
+      return: "int",
+    },
+  },
 
   // Content Functions
   content_by_id: {
@@ -1358,6 +1422,335 @@ export const HUBL_FILTERS: Record<string, TypeInfo> = {
         { name: "attribute", type: "str" },
       ],
       return: "str",
+    },
+  },
+
+  // === Common Jinja2/HubL Filters (Priority 1) ===
+
+  // String Operation Filters
+  capitalize: {
+    name: "capitalize",
+    signature: {
+      documentation: "Uppercase the first character, lowercase the rest.",
+      arguments: [],
+      return: "str",
+    },
+  },
+  lower: {
+    name: "lower",
+    signature: {
+      documentation: "Convert all letters in the value to lowercase.",
+      arguments: [],
+      return: "str",
+    },
+  },
+  upper: {
+    name: "upper",
+    signature: {
+      documentation: "Convert all letters in the value to uppercase.",
+      arguments: [],
+      return: "str",
+    },
+  },
+  title: {
+    name: "title",
+    signature: {
+      documentation: "Capitalize the first letter of each word.",
+      arguments: [],
+      return: "str",
+    },
+  },
+  trim: {
+    name: "trim",
+    signature: {
+      documentation: "Remove leading and trailing whitespace.",
+      arguments: [],
+      return: "str",
+    },
+  },
+  truncate: {
+    name: "truncate",
+    signature: {
+      documentation:
+        "Truncate a string to a specified length. If truncated, adds an ellipsis.",
+      arguments: [
+        { name: "length", type: "int", default: "255" },
+        { name: "killwords", type: "bool", default: "false" },
+        { name: "end", type: "str", default: '"..."' },
+      ],
+      return: "str",
+    },
+  },
+  replace: {
+    name: "replace",
+    signature: {
+      documentation: "Replace all instances of a substring with another string.",
+      arguments: [
+        { name: "old", type: "str" },
+        { name: "new", type: "str" },
+        { name: "count", type: "int", default: "undefined" },
+      ],
+      return: "str",
+    },
+  },
+  wordcount: {
+    name: "wordcount",
+    signature: {
+      documentation: "Count the number of words in a string.",
+      arguments: [],
+      return: "int",
+    },
+  },
+  striptags: {
+    name: "striptags",
+    signature: {
+      documentation: "Remove HTML tags from content.",
+      arguments: [],
+      return: "str",
+    },
+  },
+  urlencode: {
+    name: "urlencode",
+    signature: {
+      documentation: "Encode a string for safe URL usage.",
+      arguments: [],
+      return: "str",
+    },
+  },
+  urldecode: {
+    name: "urldecode",
+    signature: {
+      documentation: "Decode a URL-encoded string.",
+      arguments: [],
+      return: "str",
+    },
+  },
+  safe: {
+    name: "safe",
+    signature: {
+      documentation:
+        "Mark a value as safe from HTML escaping. Use with caution.",
+      arguments: [],
+      return: "str",
+    },
+  },
+
+  // Sequence Operation Filters
+  first: {
+    name: "first",
+    signature: {
+      documentation: "Return the first item of a sequence.",
+      arguments: [],
+      return: "Any",
+    },
+  },
+  last: {
+    name: "last",
+    signature: {
+      documentation: "Return the last item of a sequence.",
+      arguments: [],
+      return: "Any",
+    },
+  },
+  length: {
+    name: "length",
+    signature: {
+      documentation:
+        "Return the number of items in a sequence or mapping, or the length of a string.",
+      arguments: [],
+      return: "int",
+    },
+  },
+  reverse: {
+    name: "reverse",
+    signature: {
+      documentation: "Reverse a sequence or iterator.",
+      arguments: [],
+      return: "list",
+    },
+  },
+  sort: {
+    name: "sort",
+    signature: {
+      documentation: "Sort an iterable.",
+      arguments: [
+        { name: "reverse", type: "bool", default: "false" },
+        { name: "case_sensitive", type: "bool", default: "false" },
+        { name: "attribute", type: "str", default: "undefined" },
+      ],
+      return: "list",
+    },
+  },
+  join: {
+    name: "join",
+    signature: {
+      documentation: "Concatenate a sequence of strings with a delimiter.",
+      arguments: [
+        { name: "delimiter", type: "str", default: '""' },
+        { name: "attribute", type: "str", default: "undefined" },
+      ],
+      return: "str",
+    },
+  },
+  unique: {
+    name: "unique",
+    signature: {
+      documentation: "Remove duplicate items from a sequence.",
+      arguments: [{ name: "attribute", type: "str", default: "undefined" }],
+      return: "list",
+    },
+  },
+  sum: {
+    name: "sum",
+    signature: {
+      documentation: "Calculate the sum of a sequence of numbers.",
+      arguments: [
+        { name: "attribute", type: "str", default: "undefined" },
+        { name: "start", type: "int", default: "0" },
+      ],
+      return: "int",
+    },
+  },
+
+  // Type Conversion Filters
+  int: {
+    name: "int",
+    signature: {
+      documentation: "Convert a value to an integer.",
+      arguments: [{ name: "default", type: "int", default: "0" }],
+      return: "int",
+    },
+  },
+  float: {
+    name: "float",
+    signature: {
+      documentation: "Convert a value to a floating point number.",
+      arguments: [{ name: "default", type: "float", default: "0.0" }],
+      return: "float",
+    },
+  },
+  string: {
+    name: "string",
+    signature: {
+      documentation: "Convert a value to its string representation.",
+      arguments: [],
+      return: "str",
+    },
+  },
+  list: {
+    name: "list",
+    signature: {
+      documentation: "Convert a value to a list.",
+      arguments: [],
+      return: "list",
+    },
+  },
+
+  // Numeric Operation Filters
+  abs: {
+    name: "abs",
+    signature: {
+      documentation: "Return the absolute value of a number.",
+      arguments: [],
+      return: "int",
+    },
+  },
+  round: {
+    name: "round",
+    signature: {
+      documentation: "Round a number to a given precision.",
+      arguments: [
+        { name: "precision", type: "int", default: "0" },
+        { name: "method", type: "str", default: '"common"' },
+      ],
+      return: "float",
+    },
+  },
+  default: {
+    name: "default",
+    signature: {
+      documentation:
+        "Return the default value if the variable is undefined or falsy.",
+      arguments: [
+        { name: "default_value", type: "Any" },
+        { name: "boolean", type: "bool", default: "false" },
+      ],
+      return: "Any",
+    },
+  },
+
+  // Advanced Filters
+  groupby: {
+    name: "groupby",
+    signature: {
+      documentation: "Group a sequence of objects by a common attribute.",
+      arguments: [{ name: "attribute", type: "str" }],
+      return: "list",
+    },
+  },
+  map: {
+    name: "map",
+    signature: {
+      documentation:
+        "Apply a filter to a sequence of objects or look up an attribute.",
+      arguments: [
+        { name: "filter_or_attribute", type: "str" },
+        { name: "args", type: "Any", default: "undefined" },
+      ],
+      return: "list",
+    },
+  },
+  select: {
+    name: "select",
+    signature: {
+      documentation: "Filter a sequence of objects by a test expression.",
+      arguments: [{ name: "test", type: "str" }],
+      return: "list",
+    },
+  },
+  reject: {
+    name: "reject",
+    signature: {
+      documentation:
+        "Filter a sequence of objects by rejecting those matching a test.",
+      arguments: [{ name: "test", type: "str" }],
+      return: "list",
+    },
+  },
+  selectattr: {
+    name: "selectattr",
+    signature: {
+      documentation: "Filter a sequence of objects by testing an attribute.",
+      arguments: [
+        { name: "attribute", type: "str" },
+        { name: "test", type: "str", default: "undefined" },
+        { name: "value", type: "Any", default: "undefined" },
+      ],
+      return: "list",
+    },
+  },
+  rejectattr: {
+    name: "rejectattr",
+    signature: {
+      documentation:
+        "Filter a sequence of objects by rejecting those where an attribute matches.",
+      arguments: [
+        { name: "attribute", type: "str" },
+        { name: "test", type: "str", default: "undefined" },
+        { name: "value", type: "Any", default: "undefined" },
+      ],
+      return: "list",
+    },
+  },
+  batch: {
+    name: "batch",
+    signature: {
+      documentation: "Batch items into groups of a specified size.",
+      arguments: [
+        { name: "linecount", type: "int" },
+        { name: "fill_with", type: "Any", default: "undefined" },
+      ],
+      return: "list",
     },
   },
 }

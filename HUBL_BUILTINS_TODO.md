@@ -8,61 +8,41 @@ Based on analysis of HubSpot's official documentation (2026-01):
 - https://developers.hubspot.com/docs/cms/reference/hubl/tags/standard-tags
 - https://developers.hubspot.com/docs/cms/reference/hubl/tags/dnd-areas
 
-## Priority 1: Common Jinja2/HubL Filters (Missing)
+## ✅ Priority 1: Common Jinja2/HubL Filters (COMPLETED - v0.1.0)
 
-These are standard template filters that should be added to `HUBL_FILTERS`:
+The following 35 filters have been added to `HUBL_FILTERS`:
 
-- `abs` - Absolute value of number
-- `capitalize` - Uppercase first character
-- `first` - First item of sequence
-- `last` - Last item of sequence
-- `length` - Number of items
-- `upper` - Convert to uppercase
-- `lower` - Convert to lowercase
-- `join` - Join sequence with delimiter
-- `sort` - Sort iterable
-- `reverse` - Reverse sequence
-- `default` - Default value if undefined
-- `int` - Convert to integer
-- `float` - Convert to float
-- `string` - Convert to string
-- `list` - Convert to list
-- `sum` - Sum sequence values
-- `min` - Minimum value
-- `max` - Maximum value
-- `round` - Round number
-- `replace` - Replace substring
-- `trim` - Remove whitespace
-- `title` - Title case
-- `truncate` - Shorten string
-- `wordcount` - Count words
-- `striptags` - Remove HTML tags
-- `urlencode` - URL encode
-- `urldecode` - URL decode
+**✅ String Operations:** capitalize, lower, upper, title, trim, truncate, replace, wordcount, striptags, urlencode, urldecode, safe
+
+**✅ Sequence Operations:** first, last, length, reverse, sort, join, unique, sum
+
+**✅ Type Conversions:** int, float, string, list, bool
+
+**✅ Numeric Operations:** abs, round, default
+
+**✅ Advanced Filters:** groupby, map, select, reject, selectattr, rejectattr, batch
+
+**Still TODO (lower priority):**
+- `min`, `max` - Min/max values
 - `xmlattr` - Format as XML attributes
 - `filesizeformat` - Format as file size
-- `groupby` - Group by attribute
-- `map` - Apply filter/get attribute
-- `select` - Filter sequence
-- `reject` - Reject items
-- `selectattr` - Select by attribute
-- `rejectattr` - Reject by attribute
-- `slice` - Slice into batches
-- `batch` - Batch items
-- `random` - Random item
-- `unique` - Remove duplicates
 - `dictsort` - Sort dictionary
 - `center` - Center text
-- `indent` - Indent text
+- `indent` - Indent text (exists in runtime but not exposed)
 - `wordwrap` - Wrap text
-- `safe` - Mark as safe
 - `forceescape` - Force escape
 - `format` - String formatting
 - `pprint` - Pretty print
+- `slice` - Slice into batches
+- `random` - Random item
 
-## Priority 2: Blog Functions (Missing)
+## ✅ Priority 2: Blog Functions (COMPLETED - v0.1.0)
 
-Add to `HUBL_PROGRAM_SYMBOLS`:
+The following 6 blog functions have been added to `HUBL_PROGRAM_SYMBOLS`:
+
+**✅ Added:** blog_authors, blog_by_id, blog_page_link, blog_post_archive_url, blog_tags, blog_total_post_count
+
+Original specification:
 
 ```typescript
 blog_authors: {
