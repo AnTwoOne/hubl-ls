@@ -108,19 +108,23 @@ export const getHover = async (uri: string, position: lsp.Position) => {
       symbol.node.openToken !== undefined &&
       symbol.node.closeToken !== undefined
     ) {
-      return {
-        contents: [
-          {
-            language: "hubl",
-            value: symbolDocument.getText(
-              lsp.Range.create(
-                symbolDocument.positionAt(symbol.node.openToken.start),
-                symbolDocument.positionAt(symbol.node.closeToken.end),
-              ),
+      const contents: lsp.MarkedString[] = [
+        {
+          language: "hubl",
+          value: symbolDocument.getText(
+            lsp.Range.create(
+              symbolDocument.positionAt(symbol.node.openToken.start),
+              symbolDocument.positionAt(symbol.node.closeToken.end),
             ),
-          },
-        ],
-      } satisfies lsp.Hover
+          ),
+        },
+      ]
+      // Get the macro's type info which includes formatted documentation
+      const macroType = resolveType(getType(token.parent, document))
+      if (macroType?.signature?.documentation) {
+        contents.push(macroType.signature.documentation)
+      }
+      return { contents } satisfies lsp.Hover
     }
   }
 

@@ -3,7 +3,11 @@ import { TextDocument } from "vscode-languageserver-textdocument"
 import { URI, Utils } from "vscode-uri"
 import { BUILTIN_TYPES } from "./builtinTypes"
 import { SPECIAL_SYMBOLS } from "./constants"
-import { formatJSDocLikeMarkdown } from "./docFormatting"
+import {
+  formatJSDocLikeMarkdown,
+  parseTypedef,
+  TypedefInfo,
+} from "./docFormatting"
 import {
   configuration,
   documentASTs,
@@ -11,6 +15,7 @@ import {
   documentImports,
   documents,
   documentSymbols,
+  documentTypedefs,
   getFilters,
   getTests,
   globals,
@@ -50,10 +55,152 @@ export const argToArgumentInfo = (arg: ast.Expression): ArgumentInfo => {
   return { name: kwarg.identifierName, default: formatExpression(kwarg.value) }
 }
 
-export const getParametersFromDocumentation = (documentation: string) => {
+/**
+ * Convert a Map of TypeInfo (used internally) to Map of TypedefInfo (used for formatting).
+ * This extracts the property information in the format expected by formatJSDocLikeMarkdown.
+ */
+const typeInfoMapToTypedefInfo = (
+  typedefs: Map<string, TypeInfo>,
+): Map<string, TypedefInfo> => {
+  const result = new Map<string, TypedefInfo>()
+
+  for (const [name, typeInfo] of typedefs) {
+    const properties = new Map<string, { type: string; description?: string }>()
+
+    if (typeInfo.properties) {
+      for (const [propName, propValue] of Object.entries(typeInfo.properties)) {
+        // Skip builtin dict/list methods
+        if (
+          typeof propValue === "object" &&
+          propValue !== null &&
+          "signature" in propValue
+        ) {
+          continue
+        }
+
+        let type = "Any"
+        let description: string | undefined
+
+        if (typeof propValue === "string") {
+          type = propValue
+        } else if (propValue && typeof propValue === "object") {
+          if ("type" in propValue && typeof propValue.type === "string") {
+            type = propValue.type
+          } else if (
+            "name" in propValue &&
+            typeof propValue.name === "string"
+          ) {
+            type = propValue.name
+          }
+          if (
+            "documentation" in propValue &&
+            typeof propValue.documentation === "string"
+          ) {
+            description = propValue.documentation
+          }
+        }
+
+        properties.set(propName, { type, description })
+      }
+    }
+
+    result.set(name, {
+      properties,
+      documentation: typeInfo.documentation,
+    })
+  }
+
+  return result
+}
+
+/**
+ * Look up a type reference by name, checking:
+ * 1. @typedef definitions in current document
+ * 2. @typedef definitions in imported documents
+ * 3. Macro names (use macro's first param type if it's an object)
+ */
+export const resolveTypeReference = (
+  typeName: string,
+  documentUri?: string,
+): TypeInfo | undefined => {
+  if (!documentUri) return undefined
+
+  // Check typedefs in current document
+  const typedefs = documentTypedefs.get(documentUri)
+  if (typedefs?.has(typeName)) {
+    return typedefs.get(typeName)
+  }
+
+  // Check typedefs in imported documents
+  const imports = documentImports.get(documentUri)
+  for (const [, importedUri] of imports ?? []) {
+    if (!importedUri) continue
+    const importedTypedefs = documentTypedefs.get(importedUri)
+    if (importedTypedefs?.has(typeName)) {
+      return importedTypedefs.get(typeName)
+    }
+  }
+
+  // Check if it's a macro name - use the macro's documented param type
+  const symbols = documentSymbols.get(documentUri)
+  const macroSymbols = symbols?.get(typeName)
+  if (macroSymbols) {
+    for (const symbol of macroSymbols) {
+      if (symbol.type === "Variable") {
+        const doc = documents.get(documentUri)
+        if (doc) {
+          const typeInfo = symbol.getType(doc)
+          // If macro has a signature with arguments, get the first object param's type
+          const resolved = resolveType(typeInfo)
+          if (resolved?.signature?.arguments?.length) {
+            const firstArg = resolved.signature.arguments[0]
+            const argType = resolveType(firstArg.type)
+            if (argType?.name === "dict" && argType.properties) {
+              return argType
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Check imported documents for macros
+  for (const [, importedUri] of imports ?? []) {
+    if (!importedUri) continue
+    const importedSymbols = documentSymbols.get(importedUri)
+    const importedMacroSymbols = importedSymbols?.get(typeName)
+    if (importedMacroSymbols) {
+      for (const symbol of importedMacroSymbols) {
+        if (symbol.type === "Variable") {
+          const doc = documents.get(importedUri)
+          if (doc) {
+            const typeInfo = symbol.getType(doc)
+            const resolved = resolveType(typeInfo)
+            if (resolved?.signature?.arguments?.length) {
+              const firstArg = resolved.signature.arguments[0]
+              const argType = resolveType(firstArg.type)
+              if (argType?.name === "dict" && argType.properties) {
+                return argType
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return undefined
+}
+
+export const getParametersFromDocumentation = (
+  documentation: string,
+  documentUri?: string,
+) => {
   const parameterTypes: Record<string, TypeInfo | TypeReference> = {}
 
-  const normalizeDocType = (raw: string | undefined) => {
+  const normalizeDocType = (
+    raw: string | undefined,
+  ): string | TypeInfo | undefined => {
     if (!raw) return undefined
     const t = raw.trim().toLowerCase()
     // Minimal JSDoc -> internal builtin mapping.
@@ -65,6 +212,13 @@ export const getParametersFromDocumentation = (documentation: string) => {
       return "dict"
     if (t === "array" || t === "list") return "list"
     if (t === "any" || t === "unknown") return "Any"
+
+    // Try to resolve as a type reference (typedef or macro name)
+    const resolved = resolveTypeReference(raw.trim(), documentUri)
+    if (resolved) {
+      return resolved
+    }
+
     return raw.trim()
   }
 
@@ -132,6 +286,16 @@ export const getParametersFromDocumentation = (documentation: string) => {
     doc: string | undefined,
   ) => {
     const normalized = normalizeDocType(type)
+
+    // If normalized is a TypeInfo (resolved from typedef/macro), use it directly
+    if (typeof normalized === "object" && "name" in normalized) {
+      parameterTypes[name] = {
+        ...normalized,
+        documentation: doc || normalized.documentation,
+      }
+      return
+    }
+
     // If this looks like an object-ish param, represent it as a dict TypeInfo so
     // member completion can work.
     if (
@@ -167,10 +331,11 @@ export const getParametersFromDocumentation = (documentation: string) => {
         const [rootName, ...rest] = variable.split(".")
         const root = ensureObjectParam(rootName)
         const normalized = normalizeDocType(rawType)
-        const value: TypeReference = {
-          type: normalized ?? "Any",
-          documentation: doc,
-        }
+        // If normalized is a TypeInfo, use it directly; otherwise create TypeReference
+        const value: TypeInfo | TypeReference =
+          typeof normalized === "object" && "name" in normalized
+            ? { ...normalized, documentation: doc || normalized.documentation }
+            : { type: (normalized as string) ?? "Any", documentation: doc }
         setNestedProperty(root, rest, value)
       } else {
         upsertParam(variable, rawType, doc)
@@ -194,10 +359,11 @@ export const getParametersFromDocumentation = (documentation: string) => {
       const doc = match[3] ?? undefined
 
       const normalized = normalizeDocType(rawType)
-      const value: TypeReference = {
-        type: normalized ?? "Any",
-        documentation: doc,
-      }
+      // If normalized is a TypeInfo, use it directly; otherwise create TypeReference
+      const value: TypeInfo | TypeReference =
+        typeof normalized === "object" && "name" in normalized
+          ? { ...normalized, documentation: doc || normalized.documentation }
+          : { type: (normalized as string) ?? "Any", documentation: doc }
 
       if (variable.includes(".")) {
         const [rootName, ...rest] = variable.split(".")
@@ -228,6 +394,7 @@ export const collectSymbols = (
   result: Map<string, SymbolInfo[]>,
   imports: (ast.Include | ast.Import | ast.FromImport | ast.Extends)[],
   lsCommands: string[],
+  typedefs: Map<string, TypeInfo>,
 ) => {
   const addSymbol = (name: string, value: SymbolInfo) => {
     const values = result.get(name) ?? []
@@ -283,56 +450,74 @@ export const collectSymbols = (
       node: statement,
     })
     const rawDocumentation = statement.getDocumentation()
-    const documentation = formatJSDocLikeMarkdown(rawDocumentation)
-    const parameterTypes = getParametersFromDocumentation(rawDocumentation)
 
     addSymbol(statement.name.value, {
       type: "Variable",
       node: statement,
       identifierNode: statement.name,
-      getType: () => ({
-        name: "macro",
-        properties: {
-          name: { type: "str", documentation: "The name of the macro." },
-          arguments: {
-            name: "tuple",
-            documentation:
-              "A tuple of the names of arguments the macro accepts.",
-            properties: {
-              ...Object.fromEntries(
-                statement.args.map((arg, index) => [
-                  index.toString(),
-                  {
-                    type: "str",
-                    literalValue: JSON.stringify(arg.identifierName),
-                  },
-                ]),
-              ),
-              ...BUILTIN_TYPES["tuple"].properties,
+      getType: (document) => {
+        // Resolve parameter types lazily with document URI for typedef resolution
+        const parameterTypes = getParametersFromDocumentation(
+          rawDocumentation,
+          document?.uri,
+        )
+        // Format documentation lazily to include expanded typedefs
+        const typedefsForFormatting = typeInfoMapToTypedefInfo(typedefs)
+        const documentation = formatJSDocLikeMarkdown(
+          rawDocumentation,
+          typedefsForFormatting,
+        )
+        return {
+          name: "macro",
+          properties: {
+            name: { type: "str", documentation: "The name of the macro." },
+            arguments: {
+              name: "tuple",
+              documentation:
+                "A tuple of the names of arguments the macro accepts.",
+              properties: {
+                ...Object.fromEntries(
+                  statement.args.map((arg, index) => [
+                    index.toString(),
+                    {
+                      type: "str",
+                      literalValue: JSON.stringify(arg.identifierName),
+                    },
+                  ]),
+                ),
+                ...BUILTIN_TYPES["tuple"].properties,
+              },
+            },
+            catch_kwargs: {
+              type: "bool",
+              documentation:
+                "This is true if the macro accepts extra keyword arguments (i.e.: accesses the special kwargs variable).",
+            },
+            catch_varargs: {
+              type: "bool",
+              documentation:
+                "This is true if the macro accepts extra positional arguments (i.e.: accesses the special varargs variable).",
+            },
+            caller: {
+              type: "bool",
+              documentation:
+                "This is true if the macro accesses the special caller variable and may be called from a call tag.",
             },
           },
-          catch_kwargs: {
-            type: "bool",
-            documentation:
-              "This is true if the macro accepts extra keyword arguments (i.e.: accesses the special kwargs variable).",
+          signature: {
+            documentation,
+            arguments: statement.args.map((arg) => {
+              const argInfo = argToArgumentInfo(arg)
+              // Add type info from documentation
+              if (parameterTypes[argInfo.name]) {
+                argInfo.type = parameterTypes[argInfo.name]
+              }
+              return argInfo
+            }),
+            return: "str",
           },
-          catch_varargs: {
-            type: "bool",
-            documentation:
-              "This is true if the macro accepts extra positional arguments (i.e.: accesses the special varargs variable).",
-          },
-          caller: {
-            type: "bool",
-            documentation:
-              "This is true if the macro accesses the special caller variable and may be called from a call tag.",
-          },
-        },
-        signature: {
-          documentation,
-          arguments: statement.args.map(argToArgumentInfo),
-          return: "str",
-        },
-      }),
+        }
+      },
     })
     for (const argument of statement.args) {
       addSymbol(argument.identifierName, {
@@ -343,10 +528,18 @@ export const collectSymbols = (
           argument instanceof ast.Identifier
             ? argument
             : (argument as ast.KeywordArgumentExpression).key,
-        getType: (document) =>
-          (argument instanceof ast.KeywordArgumentExpression
-            ? getType(argument.value, document)
-            : undefined) ?? parameterTypes[argument.identifierName],
+        getType: (document) => {
+          // Resolve parameter types lazily with document URI for typedef resolution
+          const parameterTypes = getParametersFromDocumentation(
+            rawDocumentation,
+            document?.uri,
+          )
+          return (
+            (argument instanceof ast.KeywordArgumentExpression
+              ? getType(argument.value, document)
+              : undefined) ?? parameterTypes[argument.identifierName]
+          )
+        },
       })
     }
   } else if (statement instanceof ast.Block) {
@@ -430,7 +623,6 @@ export const collectSymbols = (
     }
   } else if (statement instanceof ast.CallStatement) {
     const rawDocumentation = statement.getDocumentation()
-    const parameterTypes = getParametersFromDocumentation(rawDocumentation)
     for (let i = 0; i < statement.callerArgs.length; i++) {
       const arg = statement.callerArgs[i]
       if (arg instanceof ast.Identifier) {
@@ -438,7 +630,13 @@ export const collectSymbols = (
           type: "Variable",
           node: statement.call,
           identifierNode: arg,
-          getType: () => parameterTypes[arg.value],
+          getType: (document) => {
+            const parameterTypes = getParametersFromDocumentation(
+              rawDocumentation,
+              document?.uri,
+            )
+            return parameterTypes[arg.value]
+          },
         })
       }
     }
@@ -454,6 +652,57 @@ export const collectSymbols = (
     statement.value.trim().startsWith("hubl-ls:")
   ) {
     lsCommands.push(statement.value.trim().slice("hubl-ls:".length).trim())
+  } else if (statement instanceof ast.Comment) {
+    // Check for @typedef in standalone comments
+    const typedef = parseTypedef(statement.value)
+    if (typedef) {
+      const typeInfo = typedefToTypeInfo(typedef)
+      typedefs.set(typedef.name, typeInfo)
+    }
+  }
+}
+
+/**
+ * Convert a ParsedTypedef to TypeInfo.
+ */
+const typedefToTypeInfo = (
+  typedef: ReturnType<typeof parseTypedef>,
+): TypeInfo => {
+  if (!typedef) return { name: "Any" }
+
+  const properties: Record<string, TypeInfo | TypeReference | string> = {}
+
+  for (const [propName, propInfo] of typedef.properties) {
+    // Handle nested properties (e.g., "nested.prop")
+    if (propName.includes(".")) {
+      const parts = propName.split(".")
+      let current = properties
+      for (let i = 0; i < parts.length - 1; i++) {
+        const part = parts[i]
+        if (!current[part] || typeof current[part] === "string") {
+          current[part] = { name: "dict", properties: {} }
+        }
+        current = (current[part] as TypeInfo).properties as Record<
+          string,
+          TypeInfo | TypeReference | string
+        >
+      }
+      current[parts[parts.length - 1]] = {
+        type: propInfo.type,
+        documentation: propInfo.description,
+      } as TypeReference
+    } else {
+      properties[propName] = {
+        type: propInfo.type,
+        documentation: propInfo.description,
+      } as TypeReference
+    }
+  }
+
+  return {
+    name: typedef.baseType === "object" ? "dict" : typedef.baseType,
+    properties: { ...properties, ...BUILTIN_TYPES["dict"]?.properties },
+    documentation: typedef.documentation,
   }
 }
 

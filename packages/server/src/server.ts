@@ -22,6 +22,7 @@ import {
   documentImports,
   documents,
   documentSymbols,
+  documentTypedefs,
   rootURIs,
 } from "./state"
 import { collectSymbols, findImport, SymbolInfo } from "./symbols"
@@ -157,15 +158,17 @@ const analyzeDocument = async (document: TextDocument) => {
   const imports: (ast.Include | ast.Import | ast.FromImport | ast.Extends)[] =
     []
   const lsCommands: string[] = []
+  const typedefs = new Map<string, import("./types").TypeInfo>()
 
   if (ast.program) {
     walk(ast.program, (statement) => {
-      collectSymbols(statement, symbols, imports, lsCommands)
+      collectSymbols(statement, symbols, imports, lsCommands, typedefs)
     })
 
     // Update initial analysis before going async
     documentASTs.set(document.uri, ast)
     documentSymbols.set(document.uri, symbols)
+    documentTypedefs.set(document.uri, typedefs)
     const previousImports = documentImports.get(document.uri) ?? []
     documentImports.set(
       document.uri,

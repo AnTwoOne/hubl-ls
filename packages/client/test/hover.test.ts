@@ -5,6 +5,7 @@ import { activate, getDocUri, rangeToJson } from "./helper"
 suite("Should provide hover", () => {
   const hublUri = getDocUri("hubl-valid.html")
   const macroDocsUri = getDocUri("macro-docs.html")
+  const typedefUri = getDocUri("typedef-test.html")
 
   test("Returns hover information for HubL tags + functions", async () => {
     // Hover tag name: `{% module ... %}`
@@ -35,6 +36,31 @@ suite("Should provide hover", () => {
         expect.stringContaining("`data.section_id`"),
       ]),
     )
+  })
+
+  test("Shows @example in hover documentation", async () => {
+    // Hover macro `Avatar` which has @example
+    const hover = await getHover(typedefUri, new vscode.Position(13, 12))
+
+    expect(hover.contents).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("**Example**"),
+        expect.stringContaining("Avatar"),
+      ]),
+    )
+  })
+
+  test("Shows @deprecated warning in hover", async () => {
+    // Hover macro call `OldMacro` which has @deprecated
+    const hover = await getHover(typedefUri, new vscode.Position(26, 5))
+
+    // The deprecation warning is included in the documentation string
+    const hasDeprecated = hover.contents.some((c) =>
+      c.toLowerCase().includes("deprecated"),
+    )
+    const hasNewMacro = hover.contents.some((c) => c.includes("NewMacro"))
+    expect(hasDeprecated).toBe(true)
+    expect(hasNewMacro).toBe(true)
   })
 })
 

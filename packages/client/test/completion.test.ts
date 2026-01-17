@@ -5,6 +5,7 @@ import { activate, getDocUri } from "./helper"
 suite("Should provide completions", () => {
   const hublUri = getDocUri("hubl-completions.html")
   const macroDocsUri = getDocUri("macro-docs.html")
+  const typedefUri = getDocUri("typedef-test.html")
 
   test("Returns HubL completions (tags, globals, filters)", async () => {
     // Tag-name completion while editing an unknown TagStatement name.
@@ -68,6 +69,26 @@ suite("Should provide completions", () => {
       expect.arrayContaining([
         expect.objectContaining({ label: "section_id", kind: "Property" }),
         expect.objectContaining({ label: "section_styles", kind: "Property" }),
+      ]),
+    )
+  })
+
+  test("Resolves @typedef type reference for nested property completion", async () => {
+    // In typedef-test.html, Testimonial has:
+    //   @property {AvatarData} data.author
+    // where AvatarData is defined via @typedef with `name` and `role` properties.
+    // Inside the macro, `data.author.` should complete with `name` and `role`.
+    const completions = await getCompletions(
+      typedefUri,
+      // Line 36 (0-indexed: 35) contains `  {{ data.author.name }}`
+      // Position 18 is right after the dot in `data.author.`
+      new vscode.Position(35, 18),
+    )
+
+    expect(completions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "name", kind: "Property" }),
+        expect.objectContaining({ label: "role", kind: "Property" }),
       ]),
     )
   })

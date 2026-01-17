@@ -1,0 +1,40 @@
+{#
+@typedef {object} AvatarData
+@property {string} AvatarData.name - The person's name
+@property {string} AvatarData.role - The person's role
+#}
+
+{#
+@name Avatar
+@param {object} data
+@property {string} data.name
+@property {string} data.role
+@example {{ Avatar({ name: "John", role: "Dev" }) }}
+#}
+{% macro Avatar(data) %}
+  {{ data.name }} - {{ data.role }}
+{% endmacro %}
+
+{#
+@name OldMacro
+@deprecated Use NewMacro instead
+@param {string} text
+#}
+{% macro OldMacro(text) %}
+  {{ text }}
+{% endmacro %}
+
+{{ OldMacro("test") }}
+
+{#
+@name Testimonial
+@param {object} data
+@property {AvatarData} data.author - The testimonial author
+@property {string} data.quote - The testimonial quote
+#}
+{% macro Testimonial(data) %}
+  {{ data.author.name }}
+  {{ data.quote }}
+{% endmacro %}
+
+{{ Testimonial({ author: { name: "Jane" }, quote: "Great!" }) }}

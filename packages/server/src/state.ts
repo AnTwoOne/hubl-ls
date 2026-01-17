@@ -24,6 +24,12 @@ export const documentImports = new Map<
   ][]
 >()
 export const documentSymbols = new Map<string, Map<string, SymbolInfo[]>>()
+
+/**
+ * Stores @typedef definitions per document.
+ * Key is the typedef name (e.g., "AvatarData"), value is the TypeInfo.
+ */
+export const documentTypedefs = new Map<string, Map<string, TypeInfo>>()
 export const globals: Record<string, unknown> = {}
 export const documentGlobals: Record<string, Record<string, unknown>> = {}
 export const configuration: {
