@@ -198,21 +198,9 @@ export const formatJSDocLikeMarkdown = (
     sections.push(descriptionTag.description)
   }
 
-  // Parameters section with table-like formatting
+  // Parameters section with nested typedef expansion
   if (params.length) {
     const paramLines = params
-      .filter((p) => p.name)
-      .map((p) => {
-        const typeStr = p.type ? `: \`${p.type}\`` : ""
-        const desc = p.description ? ` — *${p.description}*` : ""
-        return `- **${p.name!}**${typeStr}${desc}`
-      })
-    sections.push(["**Parameters**", ...paramLines].join("\n"))
-  }
-
-  // Properties section with nested expansion
-  if (props.length) {
-    const propLines = props
       .filter((p) => p.name)
       .map((p) =>
         formatPropertyLine(
@@ -225,7 +213,66 @@ export const formatJSDocLikeMarkdown = (
           new Set(),
         ),
       )
-    sections.push(["**Properties**", ...propLines].join("\n"))
+    sections.push(["**Parameters**", ...paramLines].join("\n"))
+  }
+
+  // Properties section with nested expansion
+  // Skip properties that:
+  // 1. Have dots (nested under a parameter, e.g., data.title)
+  // 2. Match properties of a typedef that's already expanded under a parameter
+  if (props.length && typedefs) {
+    // Collect all property names that are already shown via typedef expansion
+    const expandedPropNames = new Set<string>()
+    for (const param of params) {
+      if (param.type) {
+        const typedef = typedefs.get(param.type)
+        if (typedef?.properties) {
+          for (const propName of typedef.properties.keys()) {
+            expandedPropNames.add(propName)
+          }
+        }
+      }
+    }
+
+    const topLevelProps = props.filter(
+      (p) =>
+        p.name &&
+        !p.name.includes(".") &&
+        !expandedPropNames.has(p.name),
+    )
+    if (topLevelProps.length > 0) {
+      const propLines = topLevelProps.map((p) =>
+        formatPropertyLine(
+          p.name!,
+          p.type,
+          p.description,
+          0,
+          typedefs,
+          0,
+          new Set(),
+        ),
+      )
+      sections.push(["**Properties**", ...propLines].join("\n"))
+    }
+  } else if (props.length) {
+    // No typedefs available, show all top-level properties
+    const topLevelProps = props.filter(
+      (p) => p.name && !p.name.includes("."),
+    )
+    if (topLevelProps.length > 0) {
+      const propLines = topLevelProps.map((p) =>
+        formatPropertyLine(
+          p.name!,
+          p.type,
+          p.description,
+          0,
+          undefined,
+          0,
+          new Set(),
+        ),
+      )
+      sections.push(["**Properties**", ...propLines].join("\n"))
+    }
   }
 
   // Examples with syntax-highlighted code blocks

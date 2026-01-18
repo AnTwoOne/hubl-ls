@@ -22,6 +22,8 @@ export interface TypeInfo {
   type?: undefined
   // If the type is callable, this is its signature.
   name: string
+  // Original type name if this is a resolved typedef (e.g., "AvatarData" when name is "dict")
+  alias?: string
   signature?: SignatureInfo
   // For iterables, this is the type of the elements
   elementType?: TypeInfo | TypeReference | string
@@ -246,7 +248,9 @@ export const getType = (
 export const argumentToString = (argument: ArgumentInfo) => {
   let result = argument.name
 
-  const typename = resolveType(argument.type)?.name
+  const resolved = resolveType(argument.type)
+  // Prefer alias (original typedef name) over internal name like "dict"
+  const typename = resolved?.alias ?? resolved?.name
   if (typename !== undefined) {
     result += ": " + typename
   }

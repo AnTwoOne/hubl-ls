@@ -8,6 +8,96 @@ import { findSymbol, resolveTypeReference } from "./symbols"
 import { getType, resolveType, stringifySignatureInfo } from "./types"
 import { parentOfType, tokenAt } from "./utilities"
 
+/** Maximum depth for expanding typedef references in hover */
+const MAX_TYPEDEF_EXPANSION_DEPTH = 5
+
+/** Primitive types that should not be expanded */
+const PRIMITIVE_TYPES = new Set([
+  "string", "str", "number", "int", "integer", "float",
+  "bool", "boolean", "any", "object", "dict", "list",
+  "array", "tuple", "null", "undefined",
+])
+
+/**
+ * Format a property line with optional nested typedef expansion for hover display.
+ */
+const formatPropertyLineForHover = (
+  name: string,
+  type: string,
+  description: string | undefined,
+  indent: number,
+  uri: string,
+  depth: number,
+  expandedTypes: Set<string>,
+): string => {
+  const indentStr = "    ".repeat(indent)
+  const desc = description ? ` — *${description}*` : ""
+  let line = `${indentStr}- \`${name}\` \`${type}\`${desc}`
+
+  // Check if type is a typedef reference that should be expanded
+  if (
+    depth < MAX_TYPEDEF_EXPANSION_DEPTH &&
+    !PRIMITIVE_TYPES.has(type.toLowerCase()) &&
+    !expandedTypes.has(type)
+  ) {
+    const typedef = resolveTypeReference(type, uri)
+    if (typedef?.properties) {
+      // Track this type to prevent infinite recursion
+      const newExpandedTypes = new Set(expandedTypes)
+      newExpandedTypes.add(type)
+
+      // Expand the typedef's properties as nested items
+      const nestedLines: string[] = []
+      for (const [propName, propValue] of Object.entries(typedef.properties)) {
+        // Skip methods (have signature)
+        if (
+          typeof propValue === "object" &&
+          propValue !== null &&
+          "signature" in propValue
+        ) {
+          continue
+        }
+
+        let propType = "Any"
+        let propDesc: string | undefined
+        if (typeof propValue === "string") {
+          propType = propValue
+        } else if (propValue && typeof propValue === "object") {
+          const pv = propValue as unknown as Record<string, unknown>
+          if ("type" in pv && typeof pv.type === "string" && pv.type.length > 0) {
+            propType = pv.type
+          } else if ("name" in pv && typeof pv.name === "string") {
+            propType =
+              "alias" in pv && typeof pv.alias === "string"
+                ? pv.alias
+                : pv.name
+          }
+          if ("documentation" in pv && typeof pv.documentation === "string") {
+            propDesc = pv.documentation
+          }
+        }
+
+        nestedLines.push(
+          formatPropertyLineForHover(
+            propName,
+            propType,
+            propDesc,
+            indent + 1,
+            uri,
+            depth + 1,
+            newExpandedTypes,
+          ),
+        )
+      }
+      if (nestedLines.length > 0) {
+        line += "\n" + nestedLines.join("\n")
+      }
+    }
+  }
+
+  return line
+}
+
 /**
  * Create a MarkupContent hover with proper markdown rendering.
  */
@@ -93,32 +183,48 @@ export const getHover = async (uri: string, position: lsp.Position) => {
         parts.push(typeInfo.documentation)
       }
       if (typeInfo.properties) {
-        const propLines = Object.entries(typeInfo.properties)
-          .filter(
-            ([, v]) =>
-              typeof v !== "object" ||
-              !("signature" in v && v.signature !== undefined),
-          )
-          .map(([name, value]) => {
-            let type = "Any"
-            let desc = ""
-            if (typeof value === "string") {
-              type = value
-            } else if (value && typeof value === "object") {
-              if ("type" in value && typeof value.type === "string") {
-                type = value.type
-              } else if ("name" in value && typeof value.name === "string") {
-                type = value.name
-              }
-              if (
-                "documentation" in value &&
-                typeof value.documentation === "string"
-              ) {
-                desc = ` \u2014 ${value.documentation}`
-              }
+        const propLines: string[] = []
+        for (const [name, value] of Object.entries(typeInfo.properties)) {
+          // Skip methods (have signature)
+          if (
+            typeof value === "object" &&
+            value !== null &&
+            "signature" in value
+          ) {
+            continue
+          }
+
+          let type = "Any"
+          let desc: string | undefined
+          if (typeof value === "string") {
+            type = value
+          } else if (value && typeof value === "object") {
+            const valueObj = value as unknown as Record<string, unknown>
+            if (
+              "type" in valueObj &&
+              typeof valueObj.type === "string" &&
+              valueObj.type.length > 0
+            ) {
+              type = valueObj.type
+            } else if ("name" in valueObj && typeof valueObj.name === "string") {
+              type =
+                "alias" in valueObj && typeof valueObj.alias === "string"
+                  ? valueObj.alias
+                  : valueObj.name
             }
-            return `- \`${name}\` \`${type}\`${desc}`
-          })
+            if (
+              "documentation" in valueObj &&
+              typeof valueObj.documentation === "string"
+            ) {
+              desc = valueObj.documentation
+            }
+          }
+
+          // Use the recursive formatter for nested expansion
+          propLines.push(
+            formatPropertyLineForHover(name, type, desc, 0, uri, 0, new Set([word])),
+          )
+        }
         if (propLines.length > 0) {
           parts.push("**Properties**\n" + propLines.join("\n"))
         }

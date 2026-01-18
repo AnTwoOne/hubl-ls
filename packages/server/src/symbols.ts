@@ -91,7 +91,11 @@ const typeInfoMapToTypedefInfo = (
             "name" in propValue &&
             typeof propValue.name === "string"
           ) {
-            type = propValue.name
+            // Prefer alias (original typedef name) over internal name like "dict"
+            type =
+              "alias" in propValue && typeof propValue.alias === "string"
+                ? propValue.alias
+                : propValue.name
           }
           if (
             "documentation" in propValue &&
@@ -157,7 +161,8 @@ export const resolveTypeReference = (
             const firstArg = resolved.signature.arguments[0]
             const argType = resolveType(firstArg.type)
             if (argType?.name === "dict" && argType.properties) {
-              return argType
+              // Add alias to preserve the macro name as type reference
+              return { ...argType, alias: argType.alias ?? typeName }
             }
           }
         }
@@ -181,7 +186,8 @@ export const resolveTypeReference = (
               const firstArg = resolved.signature.arguments[0]
               const argType = resolveType(firstArg.type)
               if (argType?.name === "dict" && argType.properties) {
-                return argType
+                // Add alias to preserve the macro name as type reference
+                return { ...argType, alias: argType.alias ?? typeName }
               }
             }
           }
@@ -490,7 +496,23 @@ export const collectSymbols = (
           document?.uri,
         )
         // Format documentation lazily to include expanded typedefs
-        const typedefsForFormatting = typeInfoMapToTypedefInfo(typedefs)
+        // Include typedefs from both current document and imported documents
+        const allTypedefs = new Map(typedefs)
+        if (document?.uri) {
+          const imports = documentImports.get(document.uri)
+          for (const [, importedUri] of imports ?? []) {
+            if (!importedUri) continue
+            const importedTypedefs = documentTypedefs.get(importedUri)
+            if (importedTypedefs) {
+              for (const [name, typeInfo] of importedTypedefs) {
+                if (!allTypedefs.has(name)) {
+                  allTypedefs.set(name, typeInfo)
+                }
+              }
+            }
+          }
+        }
+        const typedefsForFormatting = typeInfoMapToTypedefInfo(allTypedefs)
         const documentation = formatJSDocLikeMarkdown(
           rawDocumentation,
           typedefsForFormatting,
@@ -730,6 +752,7 @@ const typedefToTypeInfo = (
 
   return {
     name: typedef.baseType === "object" ? "dict" : typedef.baseType,
+    alias: typedef.name, // Preserve the original typedef name
     properties: { ...properties, ...BUILTIN_TYPES["dict"]?.properties },
     documentation: typedef.documentation,
   }
