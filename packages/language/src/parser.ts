@@ -1208,6 +1208,39 @@ export function parse(
     return left
   }
 
+  // Keywords that should not be consumed as test arguments
+  // e.g., in "x is defined or y", "or" should not be parsed as an argument to "defined"
+  const testArgumentStopKeywords = new Set([
+    "and",
+    "or",
+    "not",
+    "if",
+    "else",
+    "elif",
+    "endif",
+    "for",
+    "endfor",
+    "in",
+    "is",
+    "macro",
+    "endmacro",
+    "block",
+    "endblock",
+    "extends",
+    "include",
+    "import",
+    "from",
+    "set",
+    "with",
+    "endwith",
+    "filter",
+    "endfilter",
+    "call",
+    "endcall",
+    "raw",
+    "endraw",
+  ])
+
   function parseTestExpression(): Statement {
     let operand = parseFilterExpression()
 
@@ -1234,12 +1267,21 @@ export function parse(
         test = parseCallExpression(test)
       }
 
+      // Try to parse an optional argument for tests like "x is divisibleby 3"
+      // But don't consume keywords like "and", "or", "not", etc.
       const beforeArgument = current
-      const argument = parsePrimaryExpression(true)
-      if (!(argument instanceof MissingNode)) {
-        test = new CallExpression(test, [argument])
-      } else {
-        current = beforeArgument
+      const nextToken = tokens[current]
+      const isKeyword =
+        nextToken?.type === TOKEN_TYPES.Identifier &&
+        testArgumentStopKeywords.has(nextToken.value)
+
+      if (!isKeyword) {
+        const argument = parsePrimaryExpression(true)
+        if (!(argument instanceof MissingNode)) {
+          test = new CallExpression(test, [argument])
+        } else {
+          current = beforeArgument
+        }
       }
 
       operand = new TestExpression(

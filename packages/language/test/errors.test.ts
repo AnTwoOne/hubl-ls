@@ -484,3 +484,27 @@ describe("Parsing error recovery", () => {
     })
   }
 })
+
+// Test that 'is' tests with 'and'/'or' keywords parse correctly
+// These patterns previously caused errors because 'and'/'or' were consumed as test arguments
+describe("Test expressions with logical operators", () => {
+  const VALID_TEST_PATTERNS = [
+    '{% if x is defined and y %}yes{% endif %}',
+    '{% if x is defined or y %}yes{% endif %}',
+    '{% if x is defined and y is defined %}yes{% endif %}',
+    '{% if x is defined or y is defined %}yes{% endif %}',
+    '{% if x is defined and y | length > 0 %}yes{% endif %}',
+    '{% if a.b.c is defined or d.e.f | length > 0 %}yes{% endif %}',
+    '{% if x is string_containing("foo") or y is string_containing("bar") %}yes{% endif %}',
+    '{{ x is defined and y is defined }}',
+    '{{ x is not defined or y is not defined }}',
+  ]
+
+  for (const text of VALID_TEST_PATTERNS) {
+    it(`should parse without errors: ${text}`, () => {
+      const [tokens] = tokenize(text, {}, true)
+      const [, , errors] = parse(tokens, true)
+      expect(errors).toEqual([])
+    })
+  }
+})
