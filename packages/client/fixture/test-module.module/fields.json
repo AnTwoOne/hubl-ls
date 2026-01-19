@@ -37,7 +37,12 @@
   {
     "name": "items",
     "label": "Content Items",
-    "type": "fieldgroup",
+    "type": "group",
+    "occurrence": {
+      "min": 0,
+      "max": null,
+      "default": 1
+    },
     "children": [
       {
         "name": "title",

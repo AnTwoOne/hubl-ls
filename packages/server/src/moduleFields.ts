@@ -356,13 +356,19 @@ const buildFieldDocumentation = (
 
 /**
  * Convert a single field definition to TypeInfo
+ * @param field - The field definition from fields.json
+ * @param parentPath - The path to this field's parent (for nested fields)
  */
-const fieldToTypeInfo = (field: FieldDefinition): TypeInfo | TypeReference => {
+const fieldToTypeInfo = (
+  field: FieldDefinition,
+  parentPath: string[] = [],
+): TypeInfo | TypeReference => {
   // Guard against malformed field definitions
   if (!field || typeof field.type !== "string") {
     return { name: "Any", documentation: "Unknown field" }
   }
 
+  const fieldPath = [...parentPath, field.name]
   const fieldTypeLower = field.type.toLowerCase()
   const simpleType = SIMPLE_TYPE_MAP[fieldTypeLower]
   const complexType = COMPLEX_TYPE_MAP[fieldTypeLower]
@@ -373,13 +379,13 @@ const fieldToTypeInfo = (field: FieldDefinition): TypeInfo | TypeReference => {
   // Handle group fields (nested structure)
   // A group with occurrence.max > 1 (or null/undefined for unlimited) is a repeater (list)
   // A group with occurrence.max === 1 or no occurrence is a single group (dict)
-  if (fieldTypeLower === "group") {
+  if (fieldTypeLower === "group" || fieldTypeLower === "fieldgroup") {
     const children = field.children ?? field.fields ?? []
     const childProperties: Record<string, TypeInfo | TypeReference> = {}
 
     for (const child of children) {
       if (child && child.name) {
-        childProperties[child.name] = fieldToTypeInfo(child)
+        childProperties[child.name] = fieldToTypeInfo(child, fieldPath)
       }
     }
 
@@ -409,9 +415,11 @@ const fieldToTypeInfo = (field: FieldDefinition): TypeInfo | TypeReference => {
       const elementDocumentation = elementDocLines.join("\n")
 
       // Repeater: returns a list of dicts
+      // The element's properties have fieldPath set for go-to-definition
       return {
         name: "list",
         documentation: groupDocumentation,
+        fieldPath,
         elementType: {
           name: "dict",
           documentation: elementDocumentation,
@@ -423,6 +431,7 @@ const fieldToTypeInfo = (field: FieldDefinition): TypeInfo | TypeReference => {
       return {
         name: "dict",
         documentation: groupDocumentation,
+        fieldPath,
         properties: childProperties,
       }
     }
@@ -442,16 +451,18 @@ const fieldToTypeInfo = (field: FieldDefinition): TypeInfo | TypeReference => {
     const choiceDoc = documentation + "\n\n**Choices:**\n" + choiceLines.join("\n")
 
     return {
-      type: "str",
+      name: "str",
       documentation: choiceDoc,
+      fieldPath,
     }
   }
 
   // Use simple type mapping
   if (simpleType) {
     return {
-      type: simpleType,
+      name: simpleType,
       documentation,
+      fieldPath,
     }
   }
 
@@ -460,6 +471,7 @@ const fieldToTypeInfo = (field: FieldDefinition): TypeInfo | TypeReference => {
     return {
       name: complexType.name,
       documentation,
+      fieldPath,
       properties: complexType.properties
         ? { ...complexType.properties }
         : undefined,
@@ -471,6 +483,7 @@ const fieldToTypeInfo = (field: FieldDefinition): TypeInfo | TypeReference => {
   return {
     name: "Any",
     documentation: documentation ?? `Unknown field type: ${field.type}`,
+    fieldPath,
   }
 }
 
@@ -511,4 +524,169 @@ export const getFieldsJsonPath = (moduleHtmlPath: string): string => {
   // Replace module.html with fields.json in the same directory
   const dir = moduleHtmlPath.replace(/[/\\][^/\\]+$/, "")
   return `${dir}/fields.json`
+}
+
+/**
+ * Find the position of a field definition in fields.json content.
+ * Returns the start and end offsets of the field's "name" value.
+ *
+ * @param content - The raw fields.json content
+ * @param fieldPath - Array of field names for nested access (e.g., ["settings", "max_width"])
+ * @returns The start and end offsets, or undefined if not found
+ */
+export const findFieldPosition = (
+  content: string,
+  fieldPath: string[],
+): { start: number; end: number } | undefined => {
+  if (fieldPath.length === 0) {
+    return undefined
+  }
+
+  // For each level in the path, find the field and narrow down the search scope
+  let searchContent = content
+  let searchOffset = 0
+
+  for (let pathIndex = 0; pathIndex < fieldPath.length; pathIndex++) {
+    const fieldName = fieldPath[pathIndex]
+    const isLastField = pathIndex === fieldPath.length - 1
+
+    // Find the "name": "fieldName" pattern
+    const namePattern = new RegExp(
+      `"name"\\s*:\\s*"${escapeRegExp(fieldName)}"`,
+    )
+    const match = searchContent.match(namePattern)
+
+    if (!match || match.index === undefined) {
+      return undefined
+    }
+
+    if (isLastField) {
+      // Return the position of the field name value (the quoted string)
+      const matchIndex = searchOffset + match.index
+      const nameValueStart = matchIndex + match[0].lastIndexOf('"' + fieldName + '"')
+      const nameValueEnd = nameValueStart + fieldName.length + 2 // +2 for quotes
+      return { start: nameValueStart, end: nameValueEnd }
+    }
+
+    // For nested fields, we need to find the containing object and then its children
+    // First, find the start of the object containing this "name" field
+    // Walk backwards from the match to find the opening brace
+    const objectStart = findObjectStart(searchContent, match.index)
+    if (objectStart === -1) {
+      return undefined
+    }
+
+    // Find the end of this object
+    const objectEnd = findMatchingBracket(searchContent, objectStart)
+    if (objectEnd === -1) {
+      return undefined
+    }
+
+    // Extract the object content and search for "children" or "fields" within it
+    const objectContent = searchContent.slice(objectStart, objectEnd + 1)
+    const childrenMatch = objectContent.match(/"(?:children|fields)"\s*:\s*\[/)
+    if (!childrenMatch || childrenMatch.index === undefined) {
+      return undefined
+    }
+
+    // Find the children array boundaries within the object
+    const childrenArrayStart = objectStart + childrenMatch.index + childrenMatch[0].length
+    const childrenArrayEnd = findMatchingBracket(searchContent, childrenArrayStart - 1)
+    if (childrenArrayEnd === -1) {
+      return undefined
+    }
+
+    // Narrow down search to within the children array
+    searchContent = searchContent.slice(childrenArrayStart, childrenArrayEnd)
+    searchOffset = searchOffset + childrenArrayStart
+  }
+
+  return undefined
+}
+
+/**
+ * Find the start of the JSON object containing the given position.
+ * Walks backwards to find the opening brace.
+ */
+const findObjectStart = (str: string, fromPos: number): number => {
+  let depth = 0
+  let inString = false
+  let i = fromPos - 1
+
+  while (i >= 0) {
+    const char = str[i]
+
+    // Check for escaped characters (look ahead since we're going backwards)
+    if (i > 0 && str[i - 1] === "\\") {
+      i--
+      continue
+    }
+
+    if (char === '"') {
+      inString = !inString
+    } else if (!inString) {
+      if (char === "}" || char === "]") {
+        depth++
+      } else if (char === "{") {
+        if (depth === 0) {
+          return i
+        }
+        depth--
+      } else if (char === "[") {
+        depth--
+      }
+    }
+    i--
+  }
+  return -1
+}
+
+/**
+ * Find the position of the matching closing bracket for an opening bracket.
+ */
+const findMatchingBracket = (str: string, openPos: number): number => {
+  const openChar = str[openPos]
+  const closeChar = openChar === "[" ? "]" : openChar === "{" ? "}" : ""
+  if (!closeChar) {
+    return -1
+  }
+
+  let depth = 1
+  let inString = false
+  let escape = false
+
+  for (let i = openPos + 1; i < str.length; i++) {
+    const char = str[i]
+    if (escape) {
+      escape = false
+      continue
+    }
+    if (char === "\\") {
+      escape = true
+      continue
+    }
+    if (char === '"') {
+      inString = !inString
+      continue
+    }
+    if (inString) {
+      continue
+    }
+    if (char === openChar) {
+      depth++
+    } else if (char === closeChar) {
+      depth--
+      if (depth === 0) {
+        return i
+      }
+    }
+  }
+  return -1
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+const escapeRegExp = (str: string): string => {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }

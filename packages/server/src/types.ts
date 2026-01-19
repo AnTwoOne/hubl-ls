@@ -31,6 +31,8 @@ export interface TypeInfo {
   // If the value is known
   literalValue?: string
   documentation?: string
+  // For module fields: the path in fields.json (e.g., ["items", "title"])
+  fieldPath?: string[]
 }
 
 export interface TypeReference {

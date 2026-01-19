@@ -25,6 +25,7 @@ import { getSignatureHelp } from "./signatureHelp"
 import {
   configuration,
   documentASTs,
+  documentFieldsJsonContent,
   documentFieldsJsonMap,
   documentImports,
   documentModuleFields,
@@ -214,6 +215,8 @@ const analyzeDocument = async (document: TextDocument) => {
               const moduleTypeInfo = fieldsToModuleTypeInfo(fields)
               documentModuleFields.set(document.uri, moduleTypeInfo)
               documentFieldsJsonMap.set(document.uri, fieldsJsonUri)
+              // Store raw content for go-to-definition support
+              documentFieldsJsonContent.set(document.uri, fieldsContent)
             }
           }
         } catch {

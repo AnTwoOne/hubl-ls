@@ -51,6 +51,12 @@ export const documentModuleFields = new Map<string, TypeInfo>()
  */
 export const documentFieldsJsonMap = new Map<string, string>()
 
+/**
+ * Stores raw fields.json content per module.html URI for go-to-definition.
+ * This avoids relying on the documents map which may not include JSON files.
+ */
+export const documentFieldsJsonContent = new Map<string, string>()
+
 export const globals: Record<string, unknown> = {}
 export const documentGlobals: Record<string, Record<string, unknown>> = {}
 export const configuration: {

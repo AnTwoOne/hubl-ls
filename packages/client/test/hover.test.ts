@@ -48,6 +48,18 @@ suite("Should provide hover", () => {
     expect(hover.content.toLowerCase()).toContain("deprecated")
     expect(hover.content).toContain("NewMacro")
   })
+
+  test("Shows hover for loop variable properties in module templates", async () => {
+    const moduleUri = getDocUri("test-module.module/module.html")
+
+    // Line 13 (0-idx: 12): `        <h3>{{ item.title }}</h3>`
+    // Position 21 is inside "title" in item.title (not at the boundary with the dot)
+    const hover = await getHover(moduleUri, new vscode.Position(12, 21))
+
+    // Should show the field documentation from fields.json
+    expect(hover.content).toContain("title")
+    expect(hover.content).toContain("text")
+  })
 })
 
 const hoverToContent = (h: vscode.Hover): string => {

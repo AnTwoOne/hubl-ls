@@ -1,7 +1,10 @@
 import { ast } from "@hubl-ls/language"
 import * as lsp from "vscode-languageserver"
+import { findFieldPosition } from "./moduleFields"
 import {
   documentASTs,
+  documentFieldsJsonContent,
+  documentFieldsJsonMap,
   documentImports,
   documents,
   documentSymbols,
@@ -12,6 +15,7 @@ import {
   findTypedefLocation,
   resolveTypeReference,
 } from "./symbols"
+import { getType, TypeInfo } from "./types"
 import { parentOfType, tokenAt } from "./utilities"
 
 /**
@@ -103,6 +107,47 @@ export const getDefinition = async (uri: string, position: lsp.Position) => {
   const token = tokenAt(tokens, offset)
   if (!token) {
     return
+  }
+
+  // Handle module field definitions using fieldPath from TypeInfo
+  // This works for both direct module.field access AND loop variable properties
+  // (e.g., `item.title` where `item` comes from `{% for item in module.items %}`)
+  // This mirrors the hover implementation in hover.ts
+  if (token.parent instanceof ast.Identifier) {
+    const identifier = token.parent
+
+    // Determine the expression to get the type for (same logic as hover.ts)
+    const node =
+      identifier.parent instanceof ast.MemberExpression &&
+      identifier.parent.property === identifier
+        ? identifier.parent
+        : identifier
+
+    const nodeType = getType(node, document)
+
+    // Check for fieldPath in the type info
+    const fieldPath = (nodeType as TypeInfo)?.fieldPath
+
+    if (fieldPath && fieldPath.length > 0) {
+      const fieldsJsonUri = documentFieldsJsonMap.get(uri)
+      const fieldsContent = documentFieldsJsonContent.get(uri)
+
+      if (fieldsJsonUri && fieldsContent) {
+        const fieldPosition = findFieldPosition(fieldsContent, fieldPath)
+
+        if (fieldPosition) {
+          const startPos = offsetToPosition(fieldsContent, fieldPosition.start)
+          const endPos = offsetToPosition(fieldsContent, fieldPosition.end)
+
+          return [
+            lsp.Location.create(
+              fieldsJsonUri,
+              lsp.Range.create(startPos, endPos),
+            ),
+          ]
+        }
+      }
+    }
   }
 
   const callExpression = parentOfType(token, "CallExpression") as
@@ -234,4 +279,23 @@ export const getDefinition = async (uri: string, position: lsp.Position) => {
       ]
     }
   }
+}
+
+/**
+ * Convert a byte offset to a line/character position in a string.
+ */
+const offsetToPosition = (content: string, offset: number): lsp.Position => {
+  let line = 0
+  let character = 0
+
+  for (let i = 0; i < offset && i < content.length; i++) {
+    if (content[i] === "\n") {
+      line++
+      character = 0
+    } else {
+      character++
+    }
+  }
+
+  return { line, character }
 }
