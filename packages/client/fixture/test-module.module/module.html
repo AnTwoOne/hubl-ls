@@ -1,0 +1,24 @@
+<div class="hero-module">
+  <h1>{{ module.heading }}</h1>
+
+  {% if module.show_image %}
+    <img src="{{ module.hero_image.src }}" alt="{{ module.hero_image.alt }}">
+  {% endif %}
+
+  <div style="background-color: {{ module.background_color.color }}">
+    <p>Layout: {{ module.layout }}</p>
+
+    {% for item in module.items %}
+      <div class="item">
+        <h3>{{ item.title }}</h3>
+        <div>{{ item.description }}</div>
+      </div>
+    {% endfor %}
+
+    {% if module.settings.enable_animations %}
+      <div style="max-width: {{ module.settings.max_width }}px">
+        Content with animations
+      </div>
+    {% endif %}
+  </div>
+</div>

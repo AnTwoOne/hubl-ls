@@ -1,0 +1,73 @@
+[
+  {
+    "name": "heading",
+    "label": "Heading",
+    "type": "text",
+    "required": true,
+    "default": "Welcome"
+  },
+  {
+    "name": "show_image",
+    "label": "Show Image",
+    "type": "boolean",
+    "default": true
+  },
+  {
+    "name": "hero_image",
+    "label": "Hero Image",
+    "type": "image",
+    "help_text": "Upload the main hero image"
+  },
+  {
+    "name": "background_color",
+    "label": "Background Color",
+    "type": "color"
+  },
+  {
+    "name": "layout",
+    "label": "Layout Style",
+    "type": "choice",
+    "choices": [
+      {"value": "left", "label": "Left Aligned"},
+      {"value": "center", "label": "Centered"},
+      {"value": "right", "label": "Right Aligned"}
+    ],
+    "default": "center"
+  },
+  {
+    "name": "items",
+    "label": "Content Items",
+    "type": "fieldgroup",
+    "children": [
+      {
+        "name": "title",
+        "label": "Item Title",
+        "type": "text"
+      },
+      {
+        "name": "description",
+        "label": "Item Description",
+        "type": "richtext"
+      }
+    ]
+  },
+  {
+    "name": "settings",
+    "label": "Settings",
+    "type": "group",
+    "children": [
+      {
+        "name": "max_width",
+        "label": "Max Width",
+        "type": "number",
+        "default": 1200
+      },
+      {
+        "name": "enable_animations",
+        "label": "Enable Animations",
+        "type": "boolean",
+        "default": false
+      }
+    ]
+  }
+]

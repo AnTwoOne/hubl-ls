@@ -358,10 +358,12 @@ export function parse(
         }
 
         const calleeStart = current
-        const callee = parsePrimaryExpression()
-        if (callee.type !== "Identifier") {
+        let callee = parsePrimaryExpression()
+        // Allow member expressions like namespace.macro_name
+        callee = parseMemberExpression(callee)
+        if (callee.type !== "Identifier" && callee.type !== "MemberExpression") {
           const missingNode = createMissingNode(
-            "identifier for callee",
+            "identifier or member expression for callee",
             tokens[calleeStart]?.start,
             callee,
           )

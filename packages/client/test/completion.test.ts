@@ -92,6 +92,31 @@ suite("Should provide completions", () => {
       ]),
     )
   })
+
+  test("Completes module fields from fields.json in module.html", async () => {
+    // In test-module.module/module.html, the fields.json defines fields like:
+    // heading, show_image, hero_image, background_color, layout, items, settings
+    // Line 2 (0-indexed: 1) contains `<h1>{{ module.heading }}</h1>`
+    // Position 14 is right after the dot in `module.`
+    const moduleUri = getDocUri("test-module.module/module.html")
+    const completions = await getCompletions(
+      moduleUri,
+      new vscode.Position(1, 14),
+    )
+
+    // Should include the fields defined in fields.json
+    expect(completions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: "heading", kind: "Property" }),
+        expect.objectContaining({ label: "show_image", kind: "Property" }),
+        expect.objectContaining({ label: "hero_image", kind: "Property" }),
+        expect.objectContaining({ label: "background_color", kind: "Property" }),
+        expect.objectContaining({ label: "layout", kind: "Property" }),
+        expect.objectContaining({ label: "items", kind: "Property" }),
+        expect.objectContaining({ label: "settings", kind: "Property" }),
+      ]),
+    )
+  })
 })
 
 export const getCompletions = async (

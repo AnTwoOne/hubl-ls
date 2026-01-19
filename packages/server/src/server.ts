@@ -13,13 +13,21 @@ import { getDocumentLinks } from "./documentLinks"
 import { getDocumentFormatting, getDocumentRangeFormatting } from "./formatting"
 import { getHover } from "./hover"
 import { processLSCommand } from "./lsCommands"
+import {
+  fieldsToModuleTypeInfo,
+  getFieldsJsonPath,
+  isModuleTemplate,
+  parseFieldsJson,
+} from "./moduleFields"
 import { getReferences } from "./references"
 import { getSemanticTokens, legend } from "./semantic"
 import { getSignatureHelp } from "./signatureHelp"
 import {
   configuration,
   documentASTs,
+  documentFieldsJsonMap,
   documentImports,
+  documentModuleFields,
   documents,
   documentSymbols,
   documentTypedefLocations,
@@ -191,6 +199,31 @@ const analyzeDocument = async (document: TextDocument) => {
         ) ?? [])[1],
       ]),
     )
+    // Load module fields from fields.json for module.html files
+    try {
+      const parsedUri = URI.parse(document.uri)
+      const fsPath = parsedUri.fsPath
+      if (isModuleTemplate(fsPath)) {
+        const fieldsJsonPath = getFieldsJsonPath(fsPath)
+        const fieldsJsonUri = URI.file(fieldsJsonPath).toString()
+        try {
+          const fieldsContent = await readFile(connection, fieldsJsonUri)
+          if (fieldsContent) {
+            const fields = parseFieldsJson(fieldsContent)
+            if (fields && Array.isArray(fields)) {
+              const moduleTypeInfo = fieldsToModuleTypeInfo(fields)
+              documentModuleFields.set(document.uri, moduleTypeInfo)
+              documentFieldsJsonMap.set(document.uri, fieldsJsonUri)
+            }
+          }
+        } catch {
+          documentModuleFields.delete(document.uri)
+          documentFieldsJsonMap.delete(document.uri)
+        }
+      }
+    } catch {
+      // Ignore module fields errors
+    }
 
     const documentsToAnalyze: [string, string][] = []
     const resolvedImports: [

@@ -13,6 +13,7 @@ import {
   documentASTs,
   documentGlobals,
   documentImports,
+  documentModuleFields,
   documents,
   documentSymbols,
   documentTypedefLocations,
@@ -673,21 +674,23 @@ export const collectSymbols = (
     }
   } else if (statement instanceof ast.CallStatement) {
     const rawDocumentation = statement.getDocumentation()
-    for (let i = 0; i < statement.callerArgs.length; i++) {
-      const arg = statement.callerArgs[i]
-      if (arg instanceof ast.Identifier) {
-        addSymbol(arg.value, {
-          type: "Variable",
-          node: statement.call,
-          identifierNode: arg,
-          getType: (document) => {
-            const parameterTypes = getParametersFromDocumentation(
-              rawDocumentation,
-              document?.uri,
-            )
-            return parameterTypes[arg.value]
-          },
-        })
+    if (statement.callerArgs) {
+      for (let i = 0; i < statement.callerArgs.length; i++) {
+        const arg = statement.callerArgs[i]
+        if (arg instanceof ast.Identifier) {
+          addSymbol(arg.value, {
+            type: "Variable",
+            node: statement.call,
+            identifierNode: arg,
+            getType: (document) => {
+              const parameterTypes = getParametersFromDocumentation(
+                rawDocumentation,
+                document?.uri,
+              )
+              return parameterTypes[arg.value]
+            },
+          })
+        }
       }
     }
   } else if (
@@ -845,6 +848,19 @@ export const findSymbolInDocument = <K extends SymbolInfo["type"]>(
   inScopeOf: ast.Node | undefined = undefined,
 ): Extract<SymbolInfo, { type: K }> | undefined => {
   if (type === "Variable") {
+    // Check for module fields from fields.json (for module.html files)
+    // This takes priority over the generic module type for better autocomplete
+    if (name === "module" && program !== undefined) {
+      const moduleFields = documentModuleFields.get(document.uri)
+      if (moduleFields) {
+        return {
+          type: "Variable",
+          node: program,
+          getType: () => moduleFields,
+        } as SymbolInfo as Extract<SymbolInfo, { type: K }>
+      }
+    }
+
     for (const [definerType, specialSymbols] of Object.entries(
       SPECIAL_SYMBOLS,
     )) {
@@ -1132,6 +1148,20 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
   }
 
   if (type === "Variable") {
+    // Add module fields from fields.json (for module.html files)
+    // This overrides the generic module type with specific field definitions
+    const moduleFields = documentModuleFields.get(document.uri)
+    if (moduleFields && !skipSpecialVariables) {
+      result.set("module", [
+        {
+          type: "Variable",
+          node: getProgramOf(node),
+          getType: () => moduleFields,
+        } as SymbolInfo as Extract<SymbolInfo, { type: K }>,
+        document,
+      ])
+    }
+
     if (!skipSpecialVariables) {
       for (const [definerType, specialSymbols] of Object.entries(
         SPECIAL_SYMBOLS,
@@ -1139,6 +1169,10 @@ export const findSymbolsInScope = <K extends SymbolInfo["type"]>(
         const parent = parentOfType(node, definerType)
         if (parent !== undefined) {
           for (const symbolName in specialSymbols) {
+            // Skip 'module' if we already have module fields from fields.json
+            if (symbolName === "module" && moduleFields) {
+              continue
+            }
             result.set(symbolName, [
               {
                 type: "Variable",

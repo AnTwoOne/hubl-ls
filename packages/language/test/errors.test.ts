@@ -263,7 +263,7 @@ const PARSER_ERRORS = Object.freeze({
       {
         offset: 8,
         type: "MissingNode",
-        missingType: "identifier for callee",
+        missingType: "identifier or member expression for callee",
       },
     ],
   },
@@ -273,7 +273,7 @@ const PARSER_ERRORS = Object.freeze({
       {
         offset: 8,
         type: "MissingNode",
-        missingType: "identifier for callee",
+        missingType: "identifier or member expression for callee",
       },
     ],
   },

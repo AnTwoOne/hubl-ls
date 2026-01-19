@@ -39,6 +39,18 @@ export const documentTypedefLocations = new Map<
   string,
   Map<string, ast.Comment>
 >()
+
+/**
+ * Stores module field types per document (for module.html files).
+ * Key is document URI, value is TypeInfo for the `module` variable.
+ */
+export const documentModuleFields = new Map<string, TypeInfo>()
+
+/**
+ * Maps module.html URIs to their fields.json URIs for change tracking.
+ */
+export const documentFieldsJsonMap = new Map<string, string>()
+
 export const globals: Record<string, unknown> = {}
 export const documentGlobals: Record<string, Record<string, unknown>> = {}
 export const configuration: {
